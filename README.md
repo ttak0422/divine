@@ -27,15 +27,20 @@ There is no stable public API or Neovim package output.
 - Inspect finite recursive inputs containing package shorthand and detailed
   definitions at either the root or a dependency.
 - Preserve supplied metadata and repeated occurrences without choosing defaults,
-  identity, conflict resolution, or merge rules.
+  using the standalone input inspector.
+- Resolve finite graphs into dependency-first SCC units, including cycles and
+  self-dependencies, and extract global/recursive external package requirements.
+- Diagnose conflicting settings while retaining omitted timing, provenance and
+  opt placement. [Resolution choices](docs/resolution.md) are provisional and
+  explicitly open for review.
 - Run a Lua before action, an injected/default `packadd`, then an after action.
   No `after/plugin` sourcing is added.
 - Evaluate small Nix fixtures and run Lua tests without loading real plugins.
 
 Packaging into `opt`, startup orchestration, generated Lua, all five lazy
-triggers, SCC resolution and generated documentation remain TODOs. In particular,
-the input inspector is not a graph planner and its output must not be loaded as
-a runtime plan. Missing trigger registration deliberately reports an error.
+triggers, runtime preparation of SCCs and generated documentation remain TODOs.
+Neither the input inspector nor the resolved graph is an executable Lua load
+plan. Missing trigger registration deliberately reports an error.
 
 ## Local checks without a development shell
 
@@ -45,6 +50,6 @@ With Nix and Neovim already installed:
 make test NIXPKGS_LIB=/path/to/nixpkgs/lib
 ```
 
-The default is `import <nixpkgs/lib>`. These tests cover finite input inspection
-and the isolated load primitive; they do not test packaging, lazy-trigger
-handoffs, real plugins, or Neovim 0.12.4 compatibility.
+The default is `import <nixpkgs/lib>`. These tests cover finite input inspection,
+dependency resolution and the isolated load primitive; they do not test
+packaging, lazy-trigger handoffs, real plugins, or Neovim 0.12.4 compatibility.

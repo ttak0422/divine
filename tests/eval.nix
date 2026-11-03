@@ -62,6 +62,6 @@ assert
     ]
   ));
 {
-  passed = builtins.deepSeq tree true;
-  scope = "finite recursive input inspection only; no merge, cycle or runtime plan";
+  passed = builtins.deepSeq tree (import ./resolver.nix { inherit lib; }).passed;
+  scope = "finite input inspection and SCC/dependency resolution; no runtime integration";
 }

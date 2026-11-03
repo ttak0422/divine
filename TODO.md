@@ -5,9 +5,12 @@ The design snapshot remains the behavior contract.
 
 - [ ] **API**: choose public names/schema; root and dependency definitions must keep the same recursive expressiveness.
 - [ ] **DEFAULTS**: decide shorthand/omitted load timing, triggerless definitions, and unspecified/single/multiple trigger representation.
-- [ ] **IDENTITY**: define identity, repeated definitions, merging and conflicting settings/timing without silently dropping values.
-- [ ] **CYCLES**: choose finite input for dependency cycles; direct cyclic Nix values are not the same as a finite cyclic graph.
-- [ ] **PLAN**: validate/normalize an explicit graph, extract SCCs and plan load units; prepare each SCC's runtimes before related configuration.
+- [ ] **IDENTITY**: review/adopt or revise the prototype's output-path identity, field equality/conflict errors, edge/tool unions and retained provenance; see docs/resolution.md.
+- [ ] **CYCLES**: review/adopt or revise finite back-references through package identity; directly cyclic Nix values remain distinct from finite cyclic graphs.
+- [x] **PLAN**: prototype finite graph normalization, SCC extraction and dependency-first load units, including cycles and self-dependencies.
+- [x] **EXTRACTION**: extract global, root and recursively nested extraPackages, preserving derivations and deduplicating by output path.
+- [ ] **UNIT-RUNTIME**: prepare every SCC member's runtime before related configuration; decide execution details within a unit.
+- [ ] **STARTUP-DEMAND**: review the prototype's dependency-closure startup demand, which retains original timing declarations and opt placement.
 - [ ] **PACKAGING**: place managed plugins and dependencies in opt; inspect the generated layout for dependency promotion.
 - [ ] **GENERATION**: emit Lua/actions from declarations and adjacent Lua files; add external executables/runtime files without plugin-specific Nix setup conversion.
 - [ ] **STARTUP**: initialize the runtime during init and explicitly load non-delayed opt entries through the same before/load/after path.

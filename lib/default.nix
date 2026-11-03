@@ -19,6 +19,12 @@ let
         inherit definition;
         dependencies = map inspect dependencies;
       };
+  inspectDefinitions =
+    entries:
+    if builtins.isList entries then
+      map inspect entries
+    else
+      throw "divine prototype: expected a list of plugin definitions";
 in
 {
   /**
@@ -35,15 +41,18 @@ in
     entries
     : Provisional definitions; dependencies use the same recursive form.
   */
-  inspectDefinitions =
-    entries:
-    if builtins.isList entries then
-      map inspect entries
-    else
-      throw "divine prototype: expected a list of plugin definitions";
+  inherit inspectDefinitions;
 
-  # TODO(API): names and shape are provisional, preserve unrecognized metadata.
-  # TODO(IDENTITY): repeated occurrences are retained; do not infer a merge policy.
-  # TODO(CYCLES): choose finite graph input and SCC planning before accepting cyclic values.
-  # TODO(PLAN): this inspector is not an executable load plan.
+  /**
+    Resolve finite declarations into an opt-only graph and dependency-first SCC units.
+
+    All names and policies are provisional; see docs/resolution.md for review decisions.
+
+    # Type
+
+    ```
+    resolve :: { plugins :: [Package | Definition], extraPackages ? [Package], ... } -> Graph
+    ```
+  */
+  resolve = import ./resolve.nix { inherit lib inspectDefinitions; };
 }
