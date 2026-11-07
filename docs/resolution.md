@@ -55,7 +55,9 @@ not an acceptance of the provisional identity or timing policies below.
 - **Shorthand:** contributes a package occurrence without supplying any timing
   or configuration defaults. A detailed occurrence of that package can supply
   those fields elsewhere in the graph. After merging, omitted `lazy` defaults
-  to `true`; explicit timing remains authoritative.
+  to `true`; explicit timing remains authoritative. Explicit `lazy = null` also
+  means unspecified and is removed before comparing timing declarations. Null
+  in other settings is not treated as omission.
 - **Settings:** combine fields supplied in separate occurrences. Repeating an
   identical typed value is accepted; different values for the same field error
   with the package and both input locations. String equality includes Nix build

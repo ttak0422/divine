@@ -162,11 +162,13 @@ let
       (
         acc: occurrence:
         let
-          fields = builtins.removeAttrs occurrence.definition [
-            "plugin"
-            "dependPlugins"
-            "extraPackages"
-          ];
+          fields = lib.filterAttrs (name: value: name != "lazy" || value != null) (
+            builtins.removeAttrs occurrence.definition [
+              "plugin"
+              "dependPlugins"
+              "extraPackages"
+            ]
+          );
         in
         foldl' (
           state: field:

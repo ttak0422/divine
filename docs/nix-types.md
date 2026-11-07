@@ -26,7 +26,7 @@ is the Nixpkgs library attribute set, not divine's exported library.
 Definition = {
   plugin :: Package,
   dependPlugins? :: [Package | Definition],
-  lazy? :: Bool,
+  lazy? :: Bool | Null,
   ...
 }
 InspectedDefinition = {
@@ -48,7 +48,7 @@ Configuration = {
 Inspection preserves a detailed `definition` unchanged and converts a package
 shorthand to `{ plugin = package; }`. Its `dependencies` are recursively inspected
 children, not package values. Trees must be finite. Inspection checks only the
-package, dependency-list structure and optional boolean `lazy`; other fields
+package, dependency-list structure and optional boolean-or-null `lazy`; other fields
 remain unconstrained at that stage. For resolution, every definition's optional
 `extraPackages` must also be a package list. Missing `dependPlugins` and
 `extraPackages` act as empty lists. Other definition fields become node `settings`,
@@ -100,7 +100,7 @@ location; this map differs from each resolved node's list of occurrence origins.
 and definition fields. Package shorthand and recursive detailed definitions still
 work. After merging occurrences, an omitted `lazy` defaults to `true`. Every
 resolved node therefore has boolean `settings.lazy`, while individual declarations
-may omit it. The resolver's conflict and finite-input rules still apply.
+may omit it or use `null` to leave timing unspecified. The resolver's conflict and finite-input rules still apply.
 
 ```text
 LuaSource = String | Path
@@ -112,7 +112,7 @@ CompilationDefinition = {
   plugin :: Package,
   dependPlugins? :: [Package | CompilationDefinition],
   extraPackages? :: [Package],
-  lazy? :: Bool,
+  lazy? :: Bool | Null,
   preConfig? :: LuaSource,
   config? :: LuaSource,
   load? :: LuaSource,
@@ -175,3 +175,28 @@ directory name. Plan units omit the graph's `cyclic` and `startup` attributes.
 Absent `runtimePaths` becomes an empty list; absent Lua source fields produce no
 corresponding callback attribute. The bundle derivation exposes the original
 resolved graph through `passthru.graph`.
+
+## Module input adapter
+
+The compiler validates its input with `lib.evalModules` and the `mkOption`
+declarations in `lib/options.nix`. Root and definition options describe their
+types and defaults. The adapter uses the same definition schema recursively at
+all dependency depths and keeps package derivations opaque. Lua callbacks accept
+strings or paths, triggers accept nonempty strings or lists, keys retain their
+single-mode restriction, and runtime trees accept paths or packages.
+
+`lazy` uses `types.nullOr types.bool` with `default = null`. The adapter
+materializes this safe sentinel, but does not insert empty trigger lists into
+individual occurrences. The resolver explicitly ignores only null `lazy`
+values, compares the remaining supplied fields, and applies `true` afterward.
+`nullOr` alone does not provide this merge policy. Explicit true/false conflicts
+still fail in either order; null is not accepted as omission for other fields.
+
+Module evaluation validates each occurrence separately, rather than merging
+repeated plugins as modules. This preserves exact typed equality (including
+string context), whole-field conflicts, edge/tool unions and input locations.
+The inspector and resolver still allow extension metadata; the compiler's
+schema rejects unknown root, definition and key fields. The adapter is internal,
+not a new public module API. Raw module properties such as `mkDefault` and
+`mkMerge` are rejected before evaluation, rather than interpreted as input data; public names and existing proposed ADRs remain
+provisional. Generated option documentation remains future work.

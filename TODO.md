@@ -9,6 +9,7 @@ item does not mean its design has been accepted.
 - [ ] **DEFAULTS**: lazy defaults to true for shorthand and omitted timing; remaining triggerless policy and unspecified/single/multiple trigger representation need review.
 - [ ] **IDENTITY**: review/adopt or revise the prototype's output-path identity, field equality/conflict errors, edge/tool unions and retained provenance; see docs/resolution.md.
 - [ ] **CYCLES**: review/adopt or revise finite back-references through package identity; directly cyclic Nix values remain distinct from finite cyclic graphs.
+- [x] **INPUT-SCHEMA**: validate compiler inputs with mkOption types/descriptions and nullable timing before the existing resolver; public module API and generated documentation remain separate.
 - [x] **PLAN**: prototype finite graph normalization, SCC extraction and dependency-first load units, including cycles and self-dependencies.
 - [x] **EXTRACTION**: extract global, root and recursively nested extraPackages, preserving derivations and deduplicating by output path.
 - [x] **UNIT-RUNTIME**: prepare every SCC member before phased configuration; sequencing remains proposed in ADR 0005.

@@ -126,7 +126,7 @@ in `opt`, even when nested in dependencies. This does not specify automatic
 inheritance of the parent's load timing. The `lazy` option defaults to `true`
 for package shorthand and detailed definitions with omitted timing, at every
 dependency depth. Apply the default after merging occurrences of the same
-package, preserving explicit timing declarations. Missing triggers do not imply
+package, preserving explicit timing declarations. Explicit `lazy = null` also means unspecified. Missing triggers do not imply
 startup loading.
 
 The inline after-load configuration in the example calls the plugin's own

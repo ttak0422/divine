@@ -13,7 +13,8 @@
 { lib, resolve }:
 configuration:
 let
-  graph = resolve configuration;
+  adapter = import ./options.nix { inherit lib; };
+  graph = resolve (adapter.normalize configuration);
   /**
     Raise a compiler diagnostic; this function never returns a value.
 

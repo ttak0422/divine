@@ -1,6 +1,7 @@
 { lib }:
 let
   suites = {
+    options = import ./options.nix { inherit lib; };
     input = import ./eval.nix { inherit lib; };
     resolver = import ./resolver.nix { inherit lib; };
     compiler = import ./compiler.nix { inherit lib; };
@@ -13,6 +14,29 @@ suites
   testSuiteDiscovery = {
     expr = builtins.mapAttrs (_: suite: builtins.attrNames suite) suites;
     expected = {
+      options = [
+        "testNestedNullAndStartup"
+        "testNoSyntheticTriggerConflict"
+        "testNullAndExplicitBothOrders"
+        "testNullDoesNotHideConflict"
+        "testNullTimingDefault"
+        "testNullableSchema"
+        "testOpaquePackageMetadata"
+        "testPreserveRawConflict"
+        "testRejectDependencyModuleProperty"
+        "testRejectInvalidNestedTools"
+        "testRejectInvalidStartup"
+        "testRejectKeyModuleProperty"
+        "testRejectListModuleProperty"
+        "testRejectMissingNestedPlugin"
+        "testRejectMissingPlugins"
+        "testRejectNestedUnknown"
+        "testRejectNullConfig"
+        "testRejectNullTrigger"
+        "testRejectTimingModuleProperty"
+        "testRejectTriggerModuleProperty"
+        "testRejectUnknownKey"
+      ];
       input = [
         "testAllDependenciesInspected"
         "testIndependentParentAndDependencyTiming"

@@ -23,8 +23,8 @@ let
       throw "divine prototype: expected a package or a definition containing a package"
     else if !builtins.isList dependencies then
       throw "divine prototype: dependency definitions must be a list"
-    else if definition ? lazy && !builtins.isBool definition.lazy then
-      throw "divine prototype: an explicit load-timing flag must be boolean"
+    else if definition ? lazy && definition.lazy != null && !builtins.isBool definition.lazy then
+      throw "divine prototype: an explicit load-timing flag must be boolean or null"
     else
       {
         inherit definition;
