@@ -114,11 +114,12 @@ coverage. These limitations prevent claiming universal first-event equivalence.
 
 ## Verification scope
 
-The existing Nix assertions cover compilation as well as graph resolution. The
+Named nix-unit cases cover compilation as well as graph resolution. The
 existing headless runtime check now runs isolated primitives, real opt/SCC
 fixtures and native trigger fixtures. The bundle build check starts a fresh
 Neovim with generated init, validates opt layout, startup/configuration phases,
 command and module handoff, native after/plugin behavior and an external tool.
 These tests use small synthetic plugin packages, not a third-party plugin suite.
-The Nix test-framework comparison remains unresolved; no runner/framework choice
-is adopted by these added cases. See README for the legacy default runner caveat.
+The selected nix-unit method is recorded separately in
+[ADR 0006](adr/0006-use-nix-unit.md). Adopting the test method does not accept the
+proposed runtime behavior asserted by its fixtures.

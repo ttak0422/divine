@@ -37,6 +37,7 @@
     {
       # TODO(API): implementation scaffolding, not a stable consumer interface.
       lib = import ./lib { lib = nixpkgs.lib; };
+      tests = import ./tests { lib = nixpkgs.lib; };
       checks = eachSystem (
         system:
         let
@@ -44,9 +45,14 @@
         in
         {
           pre-commit-check = hooksFor system;
-          input-eval =
-            assert (import ./tests/eval.nix { lib = pkgs.lib; }).passed;
-            pkgs.runCommand "divine-input-eval" { } "touch $out";
+          input-eval = pkgs.runCommand "divine-nix-unit-tests" { nativeBuildInputs = [ pkgs.nix-unit ]; } ''
+            export HOME="$TMPDIR/home"
+            mkdir -p "$HOME"
+            nix-unit --eval-store "$TMPDIR/store" \
+              --arg lib 'import ${nixpkgs}/lib' ${self}/tests/default.nix
+            sh ${./tests/nix-unit-runner.sh}
+            touch "$out"
+          '';
           bundle =
             let
               bundle = import ./tests/bundle.nix { inherit pkgs; };
@@ -88,6 +94,7 @@
             packages = [
               pkgs.neovim
               pkgs.nixdoc
+              pkgs.nix-unit
               pkgs.git
               pkgs.gnumake
             ]

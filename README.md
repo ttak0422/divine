@@ -53,6 +53,7 @@ runtime does not automatically source deferred `after/plugin`.
 
 ```sh
 nix develop
+make test
 nix flake check --print-build-logs
 prek run --all-files
 ```
@@ -60,19 +61,32 @@ prek run --all-files
 `nix fmt` runs git-hooks.nix/prek with nixfmt, StyLua and Luacheck. Nix functions
 use nixdoc comments. The locked tools target Apple Silicon macOS and aarch64/x86_64
 Linux. `nix flake check --no-build --all-systems` evaluates all check definitions;
-it does not execute runtime checks or prove builds on every system.
+it does not execute the nix-unit or runtime tests or prove builds on every system.
 
-The existing Nix runner has a known limitation: plain `make test` without
-`NIXPKGS_LIB` can print `<LAMBDA>` without executing Nix assertions. A test-method
-comparison remains open; this implementation does not select a new framework or
-include the separate unapproved runner patch. Use the full flake check above, or
-explicitly provide the pinned library:
+`make test-nix` runs the locked flake's named suite through nix-unit, then tests
+the runner's success, mismatch and unexpected-error exit behavior. It replaces
+the previous default path that printed `<LAMBDA>` without executing assertions.
+The suite contains 10 input, 27 resolver and 14 compiler cases, plus a discovery
+regression that checks every expected case name to prevent empty suites from
+passing unnoticed. Evaluation failures use nix-unit's `expectedError` contract.
+
+The existing nixpkgs lock pins nix-unit 2.35.1, built against Nix 2.35.3 evaluator
+components. No additional flake input or host daemon change is needed. This is
+not a claim of testing a Lix-linked nix-unit variant. See
+[ADR 0006](docs/adr/0006-use-nix-unit.md) for the selected method and boundaries.
+
+With nix-unit and Neovim on PATH, a direct library path avoids evaluating the
+flake during local tests:
 
 ```sh
-NIXPKGS_LIB="$(nix eval --impure --raw --expr '(builtins.getFlake (toString ./.)).inputs.nixpkgs.outPath')/lib" make test
+make test NIXPKGS_LIB=/path/to/pinned/nixpkgs/lib
 ```
 
-The explicit path applies the fixture function; assertion failures return nonzero.
+`NIX_UNIT=/path/to/nix-unit` can select an explicit executable. CI uses the pinned
+package and imports the pinned library directly with a private evaluation store,
+so its sandbox does not fetch the flake or access the host daemon. Full
+`nix flake check` executes this check, while `--no-build` does not.
+
 `make test-lua` runs the isolated load primitive, opt/SCC runtime and native trigger
 fixtures. The flake also builds a fixture bundle and starts Neovim through its
 generated init, checking placement, startup, command/module handoff, after/plugin

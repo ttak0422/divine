@@ -35,7 +35,6 @@ let
     ];
     startupConfig = "vim.g.mapleader = ' '";
   };
-  succeeds = value: (builtins.tryEval (builtins.deepSeq value true)).success;
   compileOne =
     settings:
     api.compile {
@@ -50,51 +49,85 @@ let
       ];
     };
 in
-assert compiled.plan.nodes.${id a}.triggers.commands == [ "Example" ];
-assert
-  compiled.plan.nodes.${id a}.triggers.keys == [
-    {
-      lhs = "<leader>x";
-      mode = "n";
-    }
-    {
-      lhs = "<F3>";
-      mode = "i";
-    }
-  ];
-assert compiled.plan.nodes.${id a}.name != compiled.plan.nodes.${id b}.name;
-assert compiled.plan.startup_units == [ (id b) ];
-assert lib.hasInfix "function()" compiled.lua;
-assert (api.compile { plugins = [ ]; }).plan.units == [ ];
-assert !(succeeds (api.compile { plugins = [ a ]; }).lua);
-assert !(succeeds (compileOne { unexpected = true; }).lua);
-assert !(succeeds (compileOne { config = false; }).lua);
-assert !(succeeds (compileOne { onCommands = [ "" ]; }).lua);
-assert
-  !(succeeds
-    (compileOne {
+{
+  testNormalizeCommandTrigger = {
+    expr = compiled.plan.nodes.${id a}.triggers.commands == [ "Example" ];
+    expected = true;
+  };
+  testNormalizeKeyTriggers = {
+    expr =
+      compiled.plan.nodes.${id a}.triggers.keys == [
+        {
+          lhs = "<leader>x";
+          mode = "n";
+        }
+        {
+          lhs = "<F3>";
+          mode = "i";
+        }
+      ];
+    expected = true;
+  };
+  testUniquePluginNames = {
+    expr = compiled.plan.nodes.${id a}.name != compiled.plan.nodes.${id b}.name;
+    expected = true;
+  };
+  testDependencyStartupUnit = {
+    expr = compiled.plan.startup_units == [ (id b) ];
+    expected = true;
+  };
+  testEmitLuaCallbacks = {
+    expr = lib.hasInfix "function()" compiled.lua;
+    expected = true;
+  };
+  testEmptyPlan = {
+    expr = (api.compile { plugins = [ ]; }).plan.units == [ ];
+    expected = true;
+  };
+  testRejectMissingTiming = {
+    expr = builtins.deepSeq ((api.compile { plugins = [ a ]; }).lua) true;
+    expectedError.type = "ThrownError";
+  };
+  testRejectUnknownSettings = {
+    expr = builtins.deepSeq ((compileOne { unexpected = true; }).lua) true;
+    expectedError.type = "ThrownError";
+  };
+  testRejectInvalidConfig = {
+    expr = builtins.deepSeq ((compileOne { config = false; }).lua) true;
+    expectedError.type = "ThrownError";
+  };
+  testRejectEmptyCommand = {
+    expr = builtins.deepSeq ((compileOne { onCommands = [ "" ]; }).lua) true;
+    expectedError.type = "ThrownError";
+  };
+  testRejectInvalidKeyMode = {
+    expr = builtins.deepSeq ((compileOne {
       onKeys = {
         lhs = "x";
         mode = "invalid";
       };
     }).lua
-  );
-assert
-  !(succeeds
-    (api.compile {
+    ) true;
+    expectedError.type = "ThrownError";
+  };
+  testRejectRelativeRuntimePath = {
+    expr = builtins.deepSeq ((api.compile {
       plugins = [ ];
       runtimePaths = [ "relative" ];
     }).lua
-  );
-assert
-  !(succeeds
-    (api.compile {
+    ) true;
+    expectedError.type = "ThrownError";
+  };
+  testRejectUnknownRootSettings = {
+    expr = builtins.deepSeq ((api.compile {
       plugins = [ ];
       unknownRoot = true;
     }).lua
-  );
-assert (compileOne { }).plan.nodes.${id a}.triggers.commands == [ ];
-{
-  passed = true;
-  scope = "provisional Lua plan compilation; no timing defaults adopted";
+    ) true;
+    expectedError.type = "ThrownError";
+  };
+  testTriggerlessDeferredPlan = {
+    expr = (compileOne { }).plan.nodes.${id a}.triggers.commands == [ ];
+    expected = true;
+  };
 }

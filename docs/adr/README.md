@@ -61,3 +61,4 @@ settle public names, omitted timing, trigger defaults or within-unit execution.
 - [0004: Propagate startup demand through prerequisite units](0004-startup-demand.md) (`proposed`).
 
 - [0005: Prepare SCC runtimes before phased configuration](0005-scc-runtime-phases.md) (`proposed`).
+- [0006: Use nix-unit for Nix logic tests](0006-use-nix-unit.md) (`accepted`).

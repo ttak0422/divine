@@ -27,7 +27,7 @@ item does not mean its design has been accepted.
 - [ ] **COMPATIBILITY**: test Neovim 0.12.4 separately from the development shell's Neovim.
 
 - [ ] **NATIVE-STARTUP**: review whether ordinary repeated native scanning of unguarded plugin scripts needs a future explicit alternative; current behavior is documented and tested.
-- [ ] **TEST-METHOD**: choose Nix evaluation test method separately; legacy default make runner remains unfixed, so use explicit NIXPKGS_LIB or full flake checks.
+- [x] **TEST-METHOD**: adopt pinned nix-unit with named cases, expected errors, case-discovery and failure-injection guards; legacy default runner replaced.
 - [ ] **REAL-PLUGINS**: validate representative third-party packages beyond synthetic opt fixtures.
 
 ## Fixed boundaries

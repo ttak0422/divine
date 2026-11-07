@@ -35,35 +35,59 @@ let
   child = builtins.elemAt root.dependencies 1;
   succeeds = value: (builtins.tryEval (builtins.deepSeq value true)).success;
 in
-assert (builtins.head tree).definition.plugin == leaf;
-assert !((builtins.head tree).definition ? lazy);
-assert child.definition == dependency;
-assert child.definition.lazy == false && root.definition.lazy == true;
-assert (builtins.head child.dependencies).definition.plugin == leaf;
-assert builtins.length root.dependencies == 2;
-assert !(succeeds (api.inspectDefinitions false));
-assert !(succeeds (api.inspectDefinitions [ { dependPlugins = [ ]; } ]));
-assert
-  !(succeeds (
-    api.inspectDefinitions [
-      {
-        plugin = leaf;
-        dependPlugins = false;
-      }
-    ]
-  ));
-assert
-  !(succeeds (
-    api.inspectDefinitions [
-      {
-        plugin = leaf;
-        lazy = "unspecified";
-      }
-    ]
-  ));
 {
-  passed = builtins.deepSeq tree (
-    (import ./resolver.nix { inherit lib; }).passed && (import ./compiler.nix { inherit lib; }).passed
-  );
-  scope = "finite input inspection and SCC/dependency resolution; Lua plan compilation; runtime tested separately";
+  testPackageShorthand = {
+    expr = (builtins.head tree).definition.plugin == leaf;
+    expected = true;
+  };
+  testShorthandHasNoTimingDefault = {
+    expr = !((builtins.head tree).definition ? lazy);
+    expected = true;
+  };
+  testRecursiveDefinitionRetained = {
+    expr = child.definition == dependency;
+    expected = true;
+  };
+  testIndependentParentAndDependencyTiming = {
+    expr = child.definition.lazy == false && root.definition.lazy == true;
+    expected = true;
+  };
+  testNestedDependency = {
+    expr = (builtins.head child.dependencies).definition.plugin == leaf;
+    expected = true;
+  };
+  testAllDependenciesInspected = {
+    expr = builtins.length root.dependencies == 2;
+    expected = true;
+  };
+  testRejectNonListInput = {
+    expr = builtins.deepSeq ((api.inspectDefinitions false)) true;
+    expectedError.type = "ThrownError";
+  };
+  testRejectMissingPlugin = {
+    expr = builtins.deepSeq ((api.inspectDefinitions [ { dependPlugins = [ ]; } ])) true;
+    expectedError.type = "ThrownError";
+  };
+  testRejectNonListDependencies = {
+    expr = builtins.deepSeq (
+      (api.inspectDefinitions [
+        {
+          plugin = leaf;
+          dependPlugins = false;
+        }
+      ])
+    ) true;
+    expectedError.type = "ThrownError";
+  };
+  testRejectInvalidTiming = {
+    expr = builtins.deepSeq (
+      (api.inspectDefinitions [
+        {
+          plugin = leaf;
+          lazy = "unspecified";
+        }
+      ])
+    ) true;
+    expectedError.type = "ThrownError";
+  };
 }

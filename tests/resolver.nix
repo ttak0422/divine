@@ -23,7 +23,6 @@ let
   };
   id = toString;
   resolve = api.resolve;
-  succeeds = value: (builtins.tryEval (builtins.deepSeq value true)).success;
   unitIds = graph: map (unit: unit.id) graph.units;
   positions =
     graph:
@@ -180,17 +179,34 @@ let
       ({ plugin = a; } // { ${field} = y; })
     ];
   };
-  checks = {
-    empty = (resolve { plugins = [ ]; }).units == [ ];
-    packageShorthand = shorthand.nodes.${id a}.package == a;
-    contextualPackage =
+in
+{
+  testEmpty = {
+    expr = (resolve { plugins = [ ]; }).units == [ ];
+    expected = true;
+  };
+  testPackageShorthand = {
+    expr = shorthand.nodes.${id a}.package == a;
+    expected = true;
+  };
+  testContextualPackage = {
+    expr =
       builtins.attrNames (resolve { plugins = [ contextual ]; }).nodes == [ (id a) ]
       &&
         builtins.getContext (toString (resolve { plugins = [ contextual ]; }).nodes.${id a}.package)
         == context;
-    noInventedTiming = shorthand.unresolvedTiming == [ (id a) ] && shorthand.startupUnits == [ ];
-    rootMetadata = shorthand.metadata.metadataExample == "retained";
-    detailedSettings =
+    expected = true;
+  };
+  testNoInventedTiming = {
+    expr = shorthand.unresolvedTiming == [ (id a) ] && shorthand.startupUnits == [ ];
+    expected = true;
+  };
+  testRootMetadata = {
+    expr = shorthand.metadata.metadataExample == "retained";
+    expected = true;
+  };
+  testDetailedSettings = {
+    expr =
       detailed.nodes.${id a}.settings == {
         lazy = false;
         config = "setup()";
@@ -200,11 +216,20 @@ let
           "two"
         ];
       };
-    optEvenAtStartup = lib.all (node: node.placement == "opt") (builtins.attrValues diamond.nodes);
-    nestedAndShared =
+    expected = true;
+  };
+  testOptEvenAtStartup = {
+    expr = lib.all (node: node.placement == "opt") (builtins.attrValues diamond.nodes);
+    expected = true;
+  };
+  testNestedAndShared = {
+    expr =
       builtins.length (builtins.attrNames diamond.nodes) == 4
       && builtins.length diamond.nodes.${id a}.origins == 2;
-    dependencyOrder =
+    expected = true;
+  };
+  testDependencyOrder = {
+    expr =
       unitIds diamond == map id [
         a
         b
@@ -212,8 +237,14 @@ let
         d
       ]
       && dependenciesFirst diamond;
-    deterministicOrder = unitIds diamond == unitIds reordered;
-    startupClosure =
+    expected = true;
+  };
+  testDeterministicOrder = {
+    expr = unitIds diamond == unitIds reordered;
+    expected = true;
+  };
+  testStartupClosure = {
+    expr =
       diamond.startupUnits == map id [
         a
         b
@@ -222,14 +253,20 @@ let
       ]
       && diamond.nodes.${id b}.settings.lazy == true
       && builtins.elem (id a) diamond.unresolvedTiming;
-    rootAndRecursiveTools =
+    expected = true;
+  };
+  testRootAndRecursiveTools = {
+    expr =
       map id diamond.extraPackages == map id [
         toolDeep
         toolDep
         toolGlobal
         toolRoot
       ];
-    finiteCycle =
+    expected = true;
+  };
+  testFiniteCycle = {
+    expr =
       builtins.length cycle.units == 3
       &&
         cycleUnit.members == map id [
@@ -238,21 +275,33 @@ let
         ]
       && cycleUnit.cyclic
       && dependenciesFirst cycle;
-    cycleStartup =
+    expected = true;
+  };
+  testCycleStartup = {
+    expr =
       cycle.startupUnits == map id [
         d
         a
       ];
-    cycleTools =
+    expected = true;
+  };
+  testCycleTools = {
+    expr =
       map id cycle.extraPackages == map id [
         toolDep
         toolRoot
       ];
-    selfDependency =
+    expected = true;
+  };
+  testSelfDependency = {
+    expr =
       builtins.length self.units == 1
       && (builtins.head self.units).cyclic
       && (builtins.head self.units).dependencies == [ ];
-    repeatedDefinitions =
+    expected = true;
+  };
+  testRepeatedDefinitions = {
+    expr =
       builtins.length repeated.nodes.${id a}.origins == 4
       &&
         repeated.nodes.${id a}.dependencies == map id [
@@ -269,7 +318,10 @@ let
           toolDep
           toolRoot
         ];
-    sameNamesDifferentPaths =
+    expected = true;
+  };
+  testSameNamesDifferentPaths = {
+    expr =
       builtins.length (
         builtins.attrNames
           (resolve {
@@ -279,21 +331,39 @@ let
             ];
           }).nodes
       ) == 2;
-    timingConflict = !(succeeds (resolve (conflicts "lazy" false true)));
-    configConflict = !(succeeds (resolve (conflicts "config" "a()" "b()")));
-    stringContextConflict =
-      !(succeeds (resolve (conflicts "config" "same" (builtins.appendContext "same" context))));
-    nestedStringContextConflict =
-      !(succeeds (
-        resolve (
-          conflicts "custom" { values = [ "same" ]; } {
-            values = [ (builtins.appendContext "same" context) ];
-          }
-        )
-      ));
-    noTriggerConcatenation = !(succeeds (resolve (conflicts "onCommands" [ "A" ] [ "B" ])));
-    nestedConflict =
-      !(succeeds (resolve {
+    expected = true;
+  };
+  testTimingConflict = {
+    expr = builtins.deepSeq ((resolve (conflicts "lazy" false true))) true;
+    expectedError.type = "ThrownError";
+  };
+  testConfigConflict = {
+    expr = builtins.deepSeq ((resolve (conflicts "config" "a()" "b()"))) true;
+    expectedError.type = "ThrownError";
+  };
+  testStringContextConflict = {
+    expr = builtins.deepSeq (
+      (resolve (conflicts "config" "same" (builtins.appendContext "same" context)))
+    ) true;
+    expectedError.type = "ThrownError";
+  };
+  testNestedStringContextConflict = {
+    expr = builtins.deepSeq (
+      (resolve (
+        conflicts "custom" { values = [ "same" ]; } {
+          values = [ (builtins.appendContext "same" context) ];
+        }
+      ))
+    ) true;
+    expectedError.type = "ThrownError";
+  };
+  testNoTriggerConcatenation = {
+    expr = builtins.deepSeq ((resolve (conflicts "onCommands" [ "A" ] [ "B" ]))) true;
+    expectedError.type = "ThrownError";
+  };
+  testNestedConflict = {
+    expr = builtins.deepSeq (
+      (resolve {
         plugins = [
           {
             plugin = a;
@@ -309,15 +379,26 @@ let
             config = "two()";
           }
         ];
-      }));
-    conflictNotHiddenByToolQuery = !(succeeds (resolve (conflicts "config" "a()" "b()")).extraPackages);
-    invalidRootTools =
-      !(succeeds (resolve {
+      })
+    ) true;
+    expectedError.type = "ThrownError";
+  };
+  testConflictNotHiddenByToolQuery = {
+    expr = builtins.deepSeq ((resolve (conflicts "config" "a()" "b()")).extraPackages) true;
+    expectedError.type = "ThrownError";
+  };
+  testInvalidRootTools = {
+    expr = builtins.deepSeq (
+      (resolve {
         plugins = [ ];
         extraPackages = false;
-      }));
-    invalidDependencyTools =
-      !(succeeds (resolve {
+      })
+    ) true;
+    expectedError.type = "ThrownError";
+  };
+  testInvalidDependencyTools = {
+    expr = builtins.deepSeq (
+      (resolve {
         plugins = [
           {
             plugin = a;
@@ -329,14 +410,8 @@ let
             ];
           }
         ];
-      }));
+      })
+    ) true;
+    expectedError.type = "ThrownError";
   };
-  failures = builtins.attrNames (lib.filterAttrs (_: value: !value) checks);
-in
-if failures != [ ] then
-  throw "resolver fixture failures: ${lib.concatStringsSep ", " failures}"
-else
-  {
-    passed = true;
-    cases = builtins.attrNames checks;
-  }
+}
