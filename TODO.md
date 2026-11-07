@@ -24,7 +24,6 @@ item does not mean its design has been accepted.
 - [ ] **DOCS**: generate configuration documentation from resolved input and record source provenance.
 - [x] **FAILURES**: proposed unit states, retained errors, reentry and no automatic retry; tested with shared dependencies and native triggers.
 - [ ] **AFTER**: native startup/deferred absence and FileType/after-ftplugin fixtures exist; add explicit user opt-in after/plugin sourcing coverage.
-- [ ] **COMPATIBILITY**: test Neovim 0.12.4 separately from the development shell's Neovim.
 
 - [ ] **NATIVE-STARTUP**: review whether ordinary repeated native scanning of unguarded plugin scripts needs a future explicit alternative; current behavior is documented and tested.
 - [x] **TEST-METHOD**: adopt pinned nix-unit with named cases, expected errors, case-discovery and failure-injection guards; legacy default runner replaced.

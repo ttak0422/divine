@@ -130,4 +130,6 @@ that changes Neovim startup. There is no NixOS VM or snapshot framework dependen
 - [TODO.md](TODO.md) tracks remaining review choices and missing coverage.
 
 No design decision becomes accepted merely because a test or implementation exists.
-Broader third-party compatibility and a separate Neovim 0.12.4 run remain unverified.
+Neovim support targets the default `pkgs.neovim` provided by the selected nixpkgs
+revision. A separate run against Neovim 0.12.4 is not required. Broader third-party
+plugin compatibility remains unverified.
