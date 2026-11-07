@@ -32,14 +32,6 @@
 
 ---@alias divine.EventContext divine.ReplayContext|vim.api.keyset.create_autocmd.callback_args
 
--- Replay probes optional legacy fields absent from current generated metadata.
--- The callback union and group name follow nvim_get_autocmds() documentation.
----@class divine.Autocmd: vim.api.keyset.get_autocmds.ret
----@field buffer? integer
----@field nested? boolean
----@field group_name? string
----@field callback? (fun(args: divine.EventContext): any)|string
-
 local M = {}
 
 ---@param message string
@@ -58,77 +50,63 @@ local function list(value, label)
   end
 end
 
--- Replay only handlers installed by this load. Replaying their entire original
--- augroups would also run unrelated, already executed handlers a second time.
----@param autocmd divine.Autocmd
----@return string
-local function identity(autocmd)
-  return vim.inspect({
-    autocmd.id,
-    autocmd.group,
-    autocmd.pattern,
-    autocmd.buffer,
-    autocmd.command,
-    autocmd.callback,
-  })
+---@class divine.EventReplay
+---@field event string
+---@field excluded? table<integer, boolean> Nil means dispatch every group.
+
+---@param event string
+---@return divine.EventReplay[]
+local function snapshot(event)
+  local events = { event }
+  if event == "BufReadPost" then events = { "BufReadPre", event } end
+  if event == "FileType" then events = { "BufReadPre", "BufReadPost", event } end
+  ---@type divine.EventReplay[]
+  local result = {}
+  for _, name in ipairs(events) do
+    ---@type divine.EventReplay
+    local entry = { event = name }
+    if name ~= "FileType" then
+      entry.excluded = {}
+      for _, item in ipairs(vim.api.nvim_get_autocmds({ event = name })) do
+        if item.group then entry.excluded[item.group] = true end
+      end
+    end
+    result[#result + 1] = entry
+  end
+  return result
 end
 
-local replay_serial = 0
----@param event string
+---@param entries divine.EventReplay[]
 ---@param args divine.EventContext
----@param before table<string, integer> Identity counts consumed during replay.
 ---@return nil
-local function replay(event, args, before)
-  for _, autocmd in ipairs(vim.api.nvim_get_autocmds({ event = event })) do
-    ---@cast autocmd divine.Autocmd
-    local signature = identity(autocmd)
-    if (before[signature] or 0) > 0 then
-      before[signature] = before[signature] - 1
-    else
-      ---@type vim.api.keyset.create_autocmd
-      local options = { once = true, nested = autocmd.nested or false }
-      if autocmd.buffer then
-        options.buffer = autocmd.buffer
-      else
-        options.pattern = autocmd.pattern
-      end
-      options.callback = function(context)
-        context.id, context.group = autocmd.id, autocmd.group
-        context.buf, context.event, context.match, context.data =
-          args.buf, args.event, args.match, args.data
-        if args.file ~= nil then context.file = args.file end
-        local remove
-        if type(autocmd.callback) == "function" then
-          remove = autocmd.callback(context)
-        elseif type(autocmd.callback) == "string" then
-          remove = vim.fn[autocmd.callback](context)
-        else
-          -- Ex-defined handlers have no API ID; their ++once and script-local
-          -- command context are not fully represented by this proposed replay.
-          vim.cmd(autocmd.command)
-        end
-        if remove or autocmd.once then pcall(vim.api.nvim_del_autocmd, autocmd.id) end
-      end
-      replay_serial = replay_serial + 1
-      local group = vim.api.nvim_create_augroup("divine_replay_" .. replay_serial, { clear = true })
-      options.group = group
-      vim.api.nvim_create_autocmd(event, options)
+local function replay(entries, args)
+  vim.api.nvim_buf_call(args.buf, function()
+    for _, entry in ipairs(entries) do
       ---@type vim.api.keyset.exec_autocmds
-      local execution = { group = group, modeline = false, data = args.data }
-      if autocmd.buffer then
-        execution.buffer = args.buf
+      local options = { modeline = false, data = args.data }
+      if entry.event == args.event then
+        options.pattern = args.match
       else
-        execution.pattern = args.match
+        options.buffer = args.buf
       end
-      local ok, err = pcall(
-        vim.api.nvim_buf_call,
-        args.buf,
-        function() vim.api.nvim_exec_autocmds(event, execution) end
-      )
-      vim.api.nvim_del_augroup_by_id(group)
-      if not ok then error(err, 0) end
+      if entry.excluded then
+        -- Snapshot eligible groups before dispatch: handlers may mutate the list.
+        local groups, seen = {}, {}
+        for _, item in ipairs(vim.api.nvim_get_autocmds({ event = entry.event })) do
+          if item.group and not entry.excluded[item.group] and not seen[item.group] then
+            seen[item.group] = true
+            groups[#groups + 1] = item.group
+          end
+        end
+        for _, group in ipairs(groups) do
+          options.group = group
+          vim.api.nvim_exec_autocmds(entry.event, options)
+        end
+      else
+        vim.api.nvim_exec_autocmds(entry.event, options)
+      end
     end
-  end
+  end)
 end
 
 ---@param controller divine.TriggerController Only load(node_id) is required.
@@ -209,66 +187,38 @@ function M.register(controller, nodes)
     cleanup(id)
     controller.load(id)
   end
-  ---@param id divine.NodeId
+  ---@type table<string, boolean>
+  local event_busy = {}
   ---@param args divine.EventContext
   ---@return nil
-  local function on_event(id, args)
-    ---@type table<string, integer>
-    local before = {}
-    for _, item in ipairs(vim.api.nvim_get_autocmds({ event = args.event })) do
-      ---@cast item divine.Autocmd
-      local signature = identity(item)
-      before[signature] = (before[signature] or 0) + 1
-    end
-    load(id)
-    replay(args.event, args, before)
-  end
-  ---@param paths table<string, boolean> Runtime paths present before loading.
-  ---@param buffer integer
-  ---@return nil
-  local function source_ftplugins(paths, buffer)
-    if vim.g.did_load_ftplugin ~= 1 then return end
-    vim.api.nvim_buf_call(buffer, function()
-      local did = vim.b.did_ftplugin
-      vim.b.did_ftplugin = nil
-      for _, path in ipairs(vim.api.nvim_list_runtime_paths()) do
-        if not paths[path] then
-          for ft in vim.bo.filetype:gmatch("[^.]+") do
-            for _, pattern in ipairs({
-              ft .. ".vim",
-              ft .. ".lua",
-              ft .. "_*.vim",
-              ft .. "_*.lua",
-              ft .. "/*.vim",
-              ft .. "/*.lua",
-            }) do
-              for _, file in ipairs(vim.fn.globpath(path, "ftplugin/" .. pattern, false, true)) do
-                vim.cmd.source(file)
-              end
-            end
-          end
+  local function on_event(args)
+    if event_busy[args.event] then return end
+    event_busy[args.event] = true
+    local ok, err = pcall(function()
+      local before, targets = snapshot(args.event), {}
+      for _, id in ipairs(ids) do
+        local triggers = nodes[id].triggers or {}
+        if
+          pending[id]
+          and (
+            vim.tbl_contains(triggers.events or {}, args.event)
+            or (args.event == "FileType" and vim.tbl_contains(triggers.filetypes or {}, args.match))
+          )
+        then
+          targets[#targets + 1] = id
         end
       end
-      vim.b.did_ftplugin = vim.b.did_ftplugin or did
+      -- Remove all participating stubs before loading can cause nested events.
+      for _, id in ipairs(targets) do
+        cleanup(id)
+      end
+      for _, id in ipairs(targets) do
+        controller.load(id)
+      end
+      if #targets > 0 then replay(before, args) end
     end)
-  end
-  ---@param id divine.NodeId
-  ---@param args divine.EventContext
-  ---@return nil
-  local function on_filetype(id, args)
-    local native_pending, seen_trigger = false, false
-    for _, item in ipairs(vim.api.nvim_get_autocmds({ event = "FileType" })) do
-      if args.id and item.id == args.id then seen_trigger = true end
-      if seen_trigger and item.group_name == "filetypeplugin" then native_pending = true end
-    end
-    ---@type table<string, boolean>
-    local paths = {}
-    for _, path in ipairs(vim.api.nvim_list_runtime_paths()) do
-      paths[path] = true
-    end
-    on_event(id, args)
-    -- A native loader still pending in this FileType dispatch will see the new paths.
-    if not native_pending then source_ftplugins(paths, args.buf) end
+    event_busy[args.event] = nil
+    if not ok then error(err, 0) end
   end
   for _, id in ipairs(ids) do
     pending[id], cleaners[id] = true, {}
@@ -281,12 +231,12 @@ function M.register(controller, nodes)
       table.insert(cleaners[id], function() pcall(vim.api.nvim_del_autocmd, handle) end)
     end
     for _, event in ipairs(triggers.events or {}) do
-      autocmd(event, { callback = function(args) on_event(id, args) end })
+      autocmd(event, { callback = on_event })
     end
     if #(triggers.filetypes or {}) > 0 then
       autocmd("FileType", {
         callback = function(args)
-          if vim.tbl_contains(triggers.filetypes, args.match) then on_filetype(id, args) end
+          if vim.tbl_contains(triggers.filetypes, args.match) then on_event(args) end
         end,
       })
     end
@@ -407,16 +357,9 @@ function M.register(controller, nodes)
     for _, id in ipairs(ids) do
       if pending[id] then install_keys(id) end
     end
-    ---@type table<string, boolean>, table<integer, string>, table<divine.NodeId, integer>, table<string, integer>
-    local paths, matches, targets, before = {}, {}, {}, {}
-    for _, item in ipairs(vim.api.nvim_get_autocmds({ event = "FileType" })) do
-      ---@cast item divine.Autocmd
-      local signature = identity(item)
-      before[signature] = (before[signature] or 0) + 1
-    end
-    for _, path in ipairs(vim.api.nvim_list_runtime_paths()) do
-      paths[path] = true
-    end
+    ---@type table<integer, string>, table<divine.NodeId, integer>
+    local matches, targets = {}, {}
+    local before = snapshot("FileType")
     -- Snapshot matches before any load cleans a node's other trigger stubs.
     for _, id in ipairs(ids) do
       if pending[id] then
@@ -431,21 +374,28 @@ function M.register(controller, nodes)
         end
       end
     end
-    for _, id in ipairs(ids) do
-      local buffer = targets[id]
-      if buffer and pending[id] then vim.api.nvim_buf_call(buffer, function() load(id) end) end
+    for id in pairs(targets) do
+      cleanup(id)
     end
-    local buffers = vim.tbl_keys(matches)
-    table.sort(buffers)
-    for _, buffer in ipairs(buffers) do
-      replay("FileType", {
-        event = "FileType",
-        match = matches[buffer],
-        buf = buffer,
-        file = vim.api.nvim_buf_get_name(buffer),
-      }, vim.deepcopy(before))
-      source_ftplugins(paths, buffer)
-    end
+    event_busy.FileType = true
+    local ok, err = pcall(function()
+      for _, id in ipairs(ids) do
+        local buffer = targets[id]
+        if buffer then vim.api.nvim_buf_call(buffer, function() controller.load(id) end) end
+      end
+      local buffers = vim.tbl_keys(matches)
+      table.sort(buffers)
+      for _, buffer in ipairs(buffers) do
+        replay(before, {
+          event = "FileType",
+          match = matches[buffer],
+          buf = buffer,
+          file = vim.api.nvim_buf_get_name(buffer),
+        })
+      end
+    end)
+    event_busy.FileType = nil
+    if not ok then error(err, 0) end
   end
   return cleanup, activate
 end

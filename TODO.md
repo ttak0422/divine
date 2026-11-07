@@ -17,7 +17,7 @@ item does not mean its design has been accepted.
 - [x] **PACKAGING**: build opt-only trees for explicit configuration dependencies and check no start promotion.
 - [x] **GENERATION**: emit Lua callbacks from text/files and add recursive external tools and runtimePaths.
 - [x] **STARTUP**: generated init registers the runtime and loads explicit startup demand through the shared SCC path.
-- [ ] **EVENT**: native event prototype replays new API handlers without duplicating old ones; complete Vimscript ++once/script-context handoff.
+- [ ] **EVENT**: native group replay covers API/Vimscript once and script context; broaden real-plugin event compatibility beyond isolated fixtures.
 - [x] **COMMAND**: native command stubs and invocation/completion handoff; see runtime fixtures for verified argument forms.
 - [x] **FILETYPE**: match current/new buffers and handle new ftplugin/after-ftplugin separately.
 - [ ] **KEY**: key operation replay is implemented with normal-mode count/register and insert/visual/operator coverage; add select/terminal fixtures.

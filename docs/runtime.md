@@ -101,14 +101,19 @@ String triggers accept either one string or a list; omission and empty lists
 mean no trigger of that kind. These are prototype representations, not final
 schema choices.
 
-- `onEvents`: native Neovim event names. Only matching handlers introduced by the
-  load are replayed; old handlers are not rerun as a whole augroup.
+- `onEvents`: native Neovim event names. Matching pending units are loaded together,
+  then the event is dispatched through Neovim in each eligible named augroup.
+  Groups with any handler for that event before loading are excluded, even when
+  the old handler's pattern does not match. Ungrouped handlers are excluded too.
+  Adding a handler to an existing event group does not replay it on the first
+  trigger; use a new event group when first-trigger handoff is needed.
 - `onCommands`: full user-command names. The stub loads before invocation and
   forwards arguments, bang, range and modifiers. Completion also loads the target
   and delegates to the newly installed command.
 - `onFiletypes`: exact filetype names. Matching current and subsequently opened
-  buffers can load the unit. Added ftplugin and after/ftplugin paths are handled
-  separately from after/plugin.
+  buffers can load the unit. FileType is dispatched globally after loading, so
+  existing and ungrouped FileType handlers also run again. The native filetype
+  loader handles ftplugin and after/ftplugin; no manual source pass is added.
 - `onKeys`: a key string (normal mode), `{ lhs = "..."; mode = "n"; }`, or a list
   of either. The original operation is fed back after loading; normal-mode count
   and register handling are tested, along with insert, visual and operator-pending
@@ -124,10 +129,25 @@ stubs are installed. This avoids binding a stale mapleader, but means a conflict
 can be reported after startup callbacks have run. Further key-mode and event
 semantics coverage is tracked in [TODO.md](../TODO.md).
 
-The event replay prototype has limitations: Ex/Vimscript autocmds do not expose
-API IDs, so their `++once` removal and script-local command context cannot yet be
-faithfully reproduced. API callback autocmds have dedicated identity and once
-coverage. These limitations prevent claiming universal first-event equivalence.
+BufReadPost first dispatches BufReadPre; FileType first dispatches BufReadPre
+and BufReadPost. Each supplemental event excludes its own pre-load groups and
+uses the triggering buffer's name for native matching. These are synthetic
+notifications after loading, not a second read of the file or a recreation of
+its original read-time state.
+
+Dispatch runs in the original buffer with the original event match and data.
+Supplemental events also receive the data. Neovim owns pattern matching, callback
+identity, `once`/`++once`, callback-return removal, nesting and Vimscript context;
+handlers are not copied or manually deleted. The native API derives event fields
+such as `<afile>` rather than overriding callback arguments. A same-event guard
+prevents trigger recursion during loading and replay. This does not suppress
+plugin handlers' own native nested events.
+
+FileType replay deliberately repeats existing handlers. A native handler still
+pending in the outer dispatch may run again after the replay; handlers should be
+idempotent. Group-level replay does not promise original global registration
+order across groups or universal first-event equivalence. The excluded-group and
+ungrouped rules apply to ordinary and supplemental events, not to FileType.
 
 ## Verification scope
 

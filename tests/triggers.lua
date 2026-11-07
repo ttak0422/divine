@@ -140,25 +140,37 @@ T["loads a command on first completion and returns plugin results"] = case(funct
   assert(count() == 1)
 end)
 
-T["replays new event handlers without repeating existing handlers"] = case(function(f)
-  _G.divine_old_event, _G.divine_new_event = 0, 0
-  local group = vim.api.nvim_create_augroup("DivineSharedFixture", { clear = true })
+T["replays new groups while excluding existing groups and unscoped handlers"] = case(function(f)
+  local calls = { old = 0, shared = 0, unscoped = 0, fresh = 0 }
+  local shared = vim.api.nvim_create_augroup("DivineShared", { clear = true })
   vim.api.nvim_create_autocmd("User", {
-    group = group,
+    group = shared,
     pattern = "DivineEvent",
-    callback = function() _G.divine_old_event = _G.divine_old_event + 1 end,
+    callback = function() calls.old = calls.old + 1 end,
   })
-  f.write("event", "plugin/event.lua", {
-    'vim.api.nvim_create_autocmd("User", { group = "DivineSharedFixture", pattern = '
-      .. '"DivineEvent", callback = function(a) _G.divine_new_event = _G.divine_new_event + 1; '
-      .. "_G.divine_event_data = a.data end })",
-  })
-  local count = f.setup("event", { events = { "User" } })
+  f.triggers.register({
+    load = function()
+      for _, name in ipairs({ "shared", "unscoped", "fresh" }) do
+        local options = {
+          pattern = "DivineEvent",
+          callback = function(a)
+            calls[name] = calls[name] + 1
+            if name == "fresh" then assert(a.match == "DivineEvent" and a.data.first) end
+          end,
+        }
+        if name == "shared" then options.group = shared end
+        if name == "fresh" then
+          options.group = vim.api.nvim_create_augroup("DivineFresh", { clear = true })
+        end
+        vim.api.nvim_create_autocmd("User", options)
+      end
+    end,
+  }, { event = { triggers = { events = { "User" } } } })
   vim.api.nvim_exec_autocmds("User", { pattern = "DivineEvent", data = { first = true } })
-  assert(count() == 1 and _G.divine_old_event == 1 and _G.divine_new_event == 1)
-  assert(_G.divine_event_data.first)
-  vim.api.nvim_exec_autocmds("User", { pattern = "DivineEvent" })
-  assert(count() == 1 and _G.divine_old_event == 2 and _G.divine_new_event == 2)
+  assert(
+    vim.deep_equal(calls, { old = 1, shared = 0, unscoped = 0, fresh = 1 }),
+    vim.inspect(calls)
+  )
 end)
 
 T["replays buffer events with original buffer and event data"] = case(function(f)
@@ -166,8 +178,10 @@ T["replays buffer events with original buffer and event data"] = case(function(f
   vim.api.nvim_buf_set_name(other, f.root .. "/other-buffer")
   vim.g.divine_other_buffer = other
   f.write("buffer_event", "plugin/event.lua", {
-    'vim.api.nvim_create_autocmd("BufEnter", { pattern = "*", callback = function(a) _G.divine_other_event = a end })',
-    'vim.api.nvim_create_autocmd("BufEnter", { buffer = vim.g.divine_other_buffer, '
+    'local group = vim.api.nvim_create_augroup("DivineBuffer", { clear = true })',
+    'vim.api.nvim_create_autocmd("BufEnter", { group = group, pattern = "*", '
+      .. "callback = function(a) _G.divine_other_event = a end })",
+    'vim.api.nvim_create_autocmd("BufEnter", { group = group, buffer = vim.g.divine_other_buffer, '
       .. "callback = function(a) _G.divine_buffer_event = a end })",
   })
   local original_buffer = vim.api.nvim_get_current_buf()
@@ -186,7 +200,8 @@ end)
 T["executes new once handlers only once"] = case(function(f)
   _G.divine_once = 0
   f.write("once", "plugin/once.lua", {
-    'vim.api.nvim_create_autocmd("User", { pattern = "DivineOnce", once = true, callback '
+    'local group = vim.api.nvim_create_augroup("DivineOnceGroup", { clear = true })',
+    'vim.api.nvim_create_autocmd("User", { group = group, pattern = "DivineOnce", once = true, callback '
       .. "= function() _G.divine_once = _G.divine_once + 1 end })",
   })
   local count = f.setup("once", { events = { "User" } })
@@ -227,7 +242,11 @@ T["supports filetype registration before enabling filetype plugins"] = case(func
   local count = f.setup("lateft", { filetypes = { "divinelate" } })
   vim.cmd("filetype plugin on")
   vim.bo.filetype = "divinelate"
-  assert(count() == 1 and vim.g.divine_late_ft == 1 and vim.g.divine_late_after == 1)
+  -- The original dispatch still has the native loader pending after replay.
+  assert(
+    count() == 1 and vim.g.divine_late_ft == 2 and vim.g.divine_late_after == 2,
+    vim.inspect({ count(), vim.g.divine_late_ft, vim.g.divine_late_after })
+  )
 end)
 
 T["activates the current filetype after registration"] = case(function(f)
@@ -349,6 +368,180 @@ T["allows module reentry from the loaded plugin script"] = case(function(f)
   f.write("reentry", "plugin/reentry.lua", { '_G.divine_reentry = require("divine_reentry")' })
   local count = f.setup("reentry", { modules = { "divine_reentry" } })
   assert(require("divine_reentry").ready and _G.divine_reentry.ready and count() == 1)
+end)
+
+T["preserves native once semantics for multiple patterns"] = case(function(f)
+  local calls = {}
+  f.triggers.register({
+    load = function()
+      vim.api.nvim_create_autocmd("User", {
+        group = vim.api.nvim_create_augroup("DivinePatternOnce", { clear = true }),
+        pattern = { "DivineFirst", "DivineSecond" },
+        once = true,
+        callback = function(a) calls[#calls + 1] = a.match end,
+      })
+    end,
+  }, { event = { triggers = { events = { "User" } } } })
+  for _, pattern in ipairs({ "DivineFirst", "DivineFirst", "DivineSecond", "DivineSecond" }) do
+    vim.api.nvim_exec_autocmds("User", { pattern = pattern })
+  end
+  assert(vim.deep_equal(calls, { "DivineFirst", "DivineSecond" }), vim.inspect(calls))
+end)
+
+T["preserves Ex once and script-local handlers"] = case(function(f)
+  f.write("script", "plugin/events.vim", {
+    "let s:count = 0",
+    "function! s:Record() abort",
+    "  let s:count += 1",
+    "  let g:divine_script_count = s:count",
+    "  let g:divine_script_match = expand('<amatch>')",
+    "endfunction",
+    "augroup DivineScriptReplay",
+    "  autocmd!",
+    "  autocmd User DivineScript ++once call s:Record()",
+    "augroup END",
+  })
+  local count = f.setup("script", { events = { "User" } })
+  vim.api.nvim_exec_autocmds("User", { pattern = "DivineScript" })
+  assert(count() == 1 and vim.g.divine_script_count == 1)
+  assert(vim.g.divine_script_match == "DivineScript")
+  vim.api.nvim_exec_autocmds("User", { pattern = "DivineScript" })
+  assert(vim.g.divine_script_count == 1)
+end)
+
+T["loads all event targets before replaying a shared new group"] = case(function(f)
+  local loaded, seen = {}, {}
+  f.triggers.register({
+    load = function(id)
+      loaded[#loaded + 1] = id
+      local group = vim.api.nvim_create_augroup("DivineBatch", { clear = false })
+      vim.api.nvim_create_autocmd("User", {
+        group = group,
+        pattern = "DivineBatch",
+        callback = function()
+          assert(#loaded == 2)
+          seen[#seen + 1] = id
+        end,
+      })
+    end,
+  }, {
+    a = { triggers = { events = { "User" } } },
+    b = { triggers = { events = { "User" } } },
+  })
+  vim.api.nvim_exec_autocmds("User", { pattern = "DivineBatch" })
+  assert(vim.deep_equal(loaded, { "a", "b" }), vim.inspect(loaded))
+  assert(vim.deep_equal(seen, { "a", "b" }), vim.inspect(seen))
+end)
+
+T["preserves nested handlers and prevents recursive trigger loads"] = case(function(f)
+  local loads, nested = 0, 0
+  vim.api.nvim_create_autocmd(
+    "User",
+    { pattern = "DivineNested", callback = function() nested = nested + 1 end }
+  )
+  f.triggers.register({
+    load = function()
+      loads = loads + 1
+      vim.api.nvim_exec_autocmds("User", { pattern = "DivineDuringLoad" })
+      vim.api.nvim_create_autocmd("User", {
+        group = vim.api.nvim_create_augroup("DivineNestedSource", { clear = true }),
+        pattern = "DivineOuter",
+        nested = true,
+        callback = function() vim.cmd("doautocmd User DivineNested") end,
+      })
+    end,
+  }, { event = { triggers = { events = { "User" } } } })
+  vim.api.nvim_exec_autocmds("User", { pattern = "DivineOuter" })
+  assert(loads == 1 and nested == 1, vim.inspect({ loads, nested }))
+end)
+
+T["supplements buffer read events in order with per-event exclusions"] = case(function(f)
+  local seen, existing = {}, 0
+  local group = vim.api.nvim_create_augroup("DivinePriorRead", { clear = true })
+  vim.api.nvim_create_autocmd(
+    "BufReadPre",
+    { group = group, callback = function() existing = existing + 1 end }
+  )
+  f.triggers.register({
+    load = function()
+      for _, event in ipairs({ "BufReadPre", "BufReadPost" }) do
+        vim.api.nvim_create_autocmd(event, {
+          group = vim.api.nvim_create_augroup("DivineRead" .. event, { clear = false }),
+          callback = function(a) seen[#seen + 1] = { a.event, a.buf, a.data } end,
+        })
+      end
+      vim.api.nvim_create_autocmd(
+        "BufReadPost",
+        { group = group, callback = function() seen[#seen + 1] = { "shared-post" } end }
+      )
+    end,
+  }, { event = { triggers = { events = { "BufReadPost" } } } })
+  local buffer = vim.api.nvim_get_current_buf()
+  vim.api.nvim_exec_autocmds("BufReadPost", { buffer = buffer, data = { original = true } })
+  assert(existing == 0)
+  assert(#seen == 3 and seen[1][1] == "BufReadPre", vim.inspect(seen))
+  assert(seen[2][1] == "shared-post" or seen[3][1] == "shared-post", vim.inspect(seen))
+  for _, entry in ipairs(seen) do
+    if entry[1] ~= "shared-post" then assert(entry[2] == buffer and entry[3].original) end
+  end
+end)
+
+T["replays all FileType handlers after read supplements"] = case(function(f)
+  local seen = {}
+  local group = vim.api.nvim_create_augroup("DivineExistingFiletype", { clear = true })
+  vim.api.nvim_create_autocmd("FileType", {
+    group = group,
+    pattern = "divinereplay",
+    callback = function() seen[#seen + 1] = "existing" end,
+  })
+  f.triggers.register({
+    load = function()
+      local fresh = vim.api.nvim_create_augroup("DivineFiletypeRead", { clear = true })
+      for _, event in ipairs({ "BufReadPre", "BufReadPost", "FileType" }) do
+        vim.api.nvim_create_autocmd(
+          event,
+          { group = fresh, callback = function(a) seen[#seen + 1] = a.event end }
+        )
+      end
+      vim.api.nvim_create_autocmd(
+        "FileType",
+        { callback = function() seen[#seen + 1] = "unscoped" end }
+      )
+    end,
+  }, { event = { triggers = { filetypes = { "divinereplay" } } } })
+  vim.bo.filetype = "divinereplay"
+  assert(
+    vim.deep_equal(seen, {
+      "existing",
+      "BufReadPre",
+      "BufReadPost",
+      "existing",
+      "FileType",
+      "unscoped",
+    }),
+    vim.inspect(seen)
+  )
+end)
+
+T["preserves native callback removal"] = case(function(f)
+  local calls, handle, group = 0
+  f.triggers.register({
+    load = function()
+      group = vim.api.nvim_create_augroup("DivineCallbackRemoval", { clear = true })
+      handle = vim.api.nvim_create_autocmd("User", {
+        group = group,
+        pattern = "DivineRemove",
+        callback = function(a)
+          assert(a.id == handle and a.group == group)
+          calls = calls + 1
+          return true
+        end,
+      })
+    end,
+  }, { event = { triggers = { events = { "User" } } } })
+  vim.api.nvim_exec_autocmds("User", { pattern = "DivineRemove" })
+  vim.api.nvim_exec_autocmds("User", { pattern = "DivineRemove" })
+  assert(calls == 1 and #vim.api.nvim_get_autocmds({ group = group }) == 0)
 end)
 
 return T
