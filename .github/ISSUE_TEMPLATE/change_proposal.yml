@@ -1,0 +1,39 @@
+name: Change proposal
+description: Propose a feature, design change, documentation update, or maintenance task.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write in English and use a short, descriptive title. Check existing issues
+        and pull requests first. Distinguish proposals from accepted decisions.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: Explain the need and who or what is affected.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome and scope
+      description: Describe the desired result, what is in scope, and any explicit exclusions.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Completion criteria
+      description: Explain how to verify completion, or state what still needs to be defined.
+    validations:
+      required: true
+  - type: textarea
+    id: questions
+    attributes:
+      label: Open questions and alternatives
+      description: Record undecided points, options, tradeoffs, and known limitations.
+  - type: textarea
+    id: related
+    attributes:
+      label: Related work and dependencies
+      description: Link relevant issues, PRs, or documentation and state any required order.

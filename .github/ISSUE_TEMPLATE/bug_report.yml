@@ -1,0 +1,41 @@
+name: Bug report
+description: Report a reproducible problem in divine.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write in English and use a short, descriptive title. Check existing issues
+        and pull requests first. Do not include secrets or private machine details.
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide the smallest configuration and steps that reproduce the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Describe what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Describe what happened and include relevant error output.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include the divine revision, OS/architecture, and relevant tool versions.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Link related work or describe a workaround, if available.
