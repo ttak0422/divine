@@ -112,6 +112,7 @@
                 export NVIM_LOG_FILE="$TMPDIR/nvim.log"
                 nvim --headless -u NONE --noplugin -n -i NONE -l tests/run.lua
                 sh tests/mini-test-runner.sh
+                nvim --headless -u NONE --noplugin -n -i NONE -l tests/mini-test-environment.lua
                 touch "$out"
               '';
         }

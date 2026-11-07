@@ -15,3 +15,4 @@ test-nix:
 test-lua:
 	@NVIM_LOG_FILE="$${TMPDIR:-/tmp}/divine-test-nvim.log" nvim --headless -u NONE --noplugin -n -i NONE -l tests/run.lua
 	@sh tests/mini-test-runner.sh
+	@nvim --headless -u NONE --noplugin -n -i NONE -l tests/mini-test-environment.lua

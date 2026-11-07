@@ -1,7 +1,8 @@
 #!/bin/sh
 # Exercise the same entry point used by Make and the flake check.
 set -eu
-runner=${NVIM:-nvim}
+# NVIM is Neovim's server address in child processes, not an executable.
+runner=${NVIM_BIN:-nvim}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 export NVIM_LOG_FILE="$work/nvim.log"
