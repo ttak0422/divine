@@ -30,10 +30,13 @@ Chosen option: nix-unit, matching the user's choice to test logic written in Nix
 with named cases and native expected-error support. Keep flake checks as the
 build/execution entry point and headless Neovim for runtime behavior.
 
-Use `pkgs.nix-unit` from the existing nixpkgs lock. That pins version 2.35.1 and
-its Nix 2.35.3 evaluator components, without adding an independent input. The
-package's embedded evaluator is distinct from the host's Nix or Lix CLI/daemon.
-No host daemon change is required; Lix-linked nix-unit has not been validated.
+Use `pkgs.nix-unit` from the nixpkgs revision selected by
+[flake.lock](../../flake.lock), without adding an independent input. The package
+selection in [flake.nix](../../flake.nix) and the locked nixpkgs definitions
+determine nix-unit and its evaluator versions; this decision does not pin a
+separate release. The package's embedded evaluator is distinct from the host's
+Nix or Lix CLI/daemon. No host daemon change is required; Lix-linked nix-unit has
+not been validated.
 
 ### Consequences
 

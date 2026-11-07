@@ -23,6 +23,11 @@ Do not invent alternatives or imply that unreviewed options were rejected.}
 Proposed option: "{option}", because {documented reason, or state that the reason
 still needs review}. Use "Chosen option" only when the decision is accepted.
 
+<!-- Link to flake.lock and flake.nix for dependency versions and package
+     selection; do not copy current versions or revisions into the decision.
+     Keep exact versions only when essential historical evidence, with a date
+     and source. See README.md#dependency-versions. -->
+
 ### Consequences
 
 - Positive: {Known benefit, or "Not yet identified".}

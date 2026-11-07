@@ -1,8 +1,8 @@
 # Architecture decision records
 
 Use a lightweight adaptation of the
-[MADR 4.0 minimal template](https://github.com/adr/madr/blob/4.0.0/template/adr-template-minimal.md).
-ADRs follow the [project language guidelines](../contributing.md#project-language-and-examples).
+[MADR minimal template](https://github.com/adr/madr/blob/4.0.0/template/adr-template-minimal.md).
+ADRs follow the [project language guidelines](../../CONTRIBUTING.md#language).
 Each record keeps the minimal context, options and outcome, plus `status`,
 `date`, `discussion`, the reason for the choice, and positive and negative
 consequences. The local `discussion` metadata points to the PR or issue where
@@ -26,6 +26,19 @@ the decision can be reviewed.
 
 Keep the core sections in the template. Add sections such as open questions or
 implementation evidence only when useful; a full MADR checklist is not required.
+
+### Dependency versions
+
+Record the choice and its rationale, not a copy of the current dependency
+versions. Refer to [flake.lock](../../flake.lock) for the locked inputs and
+[flake.nix](../../flake.nix) for package selection; the selected nixpkgs
+definitions determine the concrete package versions. Do not duplicate those
+versions or revisions in an ADR. Routine lock updates do not require ADR edits.
+
+Include an exact version only when it is necessary to understand a historical
+decision or compatibility constraint. Label it as historical evidence with its
+date and source, not as the current dependency requirement. Preserve stable
+source citations, such as the upstream template link above, as provenance.
 
 ## Status and review
 

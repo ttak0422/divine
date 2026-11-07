@@ -24,9 +24,12 @@ No broader test-framework comparison or snapshot framework is adopted here.
 ## Decision Outcome
 
 Chosen option: mini.test, following the user's selection. Use
-`pkgs.vimPlugins.mini-test` from the existing nixpkgs lock (0.18.0), only in the
-development shell and the runtime check. Do not add another flake input or place
-the framework in generated bundles or user runtime paths.
+`pkgs.vimPlugins.mini-test` from the nixpkgs revision selected by
+[flake.lock](../../flake.lock), only in the development shell and the runtime
+check. The package selection in [flake.nix](../../flake.nix) and the locked
+nixpkgs definitions determine the framework version; this decision does not pin
+a separate release. Do not add another flake input or place the framework in
+generated bundles or user runtime paths.
 
 Use mini.test sets with per-case setup and cleanup. Each case executes in a fresh
 headless Neovim child without loading mini.test into that child. Keep the separate
