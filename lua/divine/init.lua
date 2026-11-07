@@ -42,80 +42,23 @@ end
 ---@param plan divine.Plan
 ---@return table<divine.UnitId, divine.Unit> units
 ---@return table<divine.NodeId, divine.UnitId> node_units
-local function validate(plan)
-  assert(type(plan) == "table" and type(plan.nodes) == "table", "divine: nodes are required")
-  assert(type(plan.units) == "table" and vim.islist(plan.units), "divine: units must be a list")
-  assert(
-    plan.startup_units == nil
-      or (type(plan.startup_units) == "table" and vim.islist(plan.startup_units)),
-    "divine: startup_units must be a list"
-  )
-  assert(plan.startup == nil or type(plan.startup) == "function", "divine: invalid startup hook")
-  ---@type table<divine.UnitId, divine.Unit>, table<divine.NodeId, divine.UnitId>, table<string, boolean>
-  local units, node_units, names = {}, {}, {}
-  for id, node in pairs(plan.nodes) do
-    assert(type(id) == "string" and type(node) == "table", "divine: invalid node")
-    assert(
-      type(node.name) == "string" and node.name:match("^[%w_.-]+$"),
-      "divine: invalid package name"
-    )
-    assert(not names[node.name], "divine: duplicate package name: " .. node.name)
-    names[node.name] = true
-    for _, hook in ipairs({ "before", "load", "after" }) do
-      assert(
-        node[hook] == nil or type(node[hook]) == "function",
-        "divine: invalid " .. hook .. " hook"
-      )
-    end
-  end
+local function index_plan(plan)
+  -- The compiler owns plan shape, package names, callbacks and SCC DAG validity.
+  ---@type table<divine.UnitId, divine.Unit>, table<divine.NodeId, divine.UnitId>
+  local units, node_units = {}, {}
   for _, unit in ipairs(plan.units) do
-    assert(type(unit) == "table", "divine: invalid unit")
-    assert(type(unit.id) == "string" and not units[unit.id], "divine: invalid or duplicate unit")
-    assert(
-      type(unit.members) == "table" and vim.islist(unit.members) and #unit.members > 0,
-      "divine: empty unit"
-    )
-    assert(
-      type(unit.dependencies) == "table" and vim.islist(unit.dependencies),
-      "divine: unit dependencies must be a list"
-    )
     units[unit.id] = unit
     for _, id in ipairs(unit.members) do
-      assert(plan.nodes[id] and not node_units[id], "divine: unknown or repeated unit member")
       node_units[id] = unit.id
     end
-  end
-  for id in pairs(plan.nodes) do
-    assert(node_units[id], "divine: node has no unit: " .. id)
-  end
-  ---@type table<divine.UnitId, boolean>, table<divine.UnitId, boolean>
-  local visited, visiting = {}, {}
-  ---@param id divine.UnitId
-  ---@return nil
-  local function visit(id)
-    assert(units[id], "divine: unknown unit: " .. tostring(id))
-    assert(not visiting[id], "divine: dependency cycle between units: " .. id)
-    if visited[id] then return end
-    visiting[id] = true
-    for _, dependency in ipairs(units[id].dependencies) do
-      visit(dependency)
-    end
-    visiting[id], visited[id] = nil, true
-  end
-  for id in pairs(units) do
-    visit(id)
-  end
-  for _, id in ipairs(plan.startup_units or {}) do
-    assert(units[id], "divine: unknown startup unit: " .. tostring(id))
   end
   return units, node_units
 end
 
----@param plan divine.Plan Invalid plans raise before registration or callbacks.
+---@param plan divine.Plan Compiler-produced plan; not a user configuration interface.
 ---@return divine.Controller controller
 function M.setup(plan)
-  -- Validate the complete DAG before registration or user callbacks have effects.
-  local units, node_units = validate(plan)
+  local units, node_units = index_plan(plan)
   ---@class divine.Controller: divine.TriggerController
   ---@field states table<divine.UnitId, divine.UnitState>
   ---@field errors table<divine.UnitId, string> Failure messages exist only for failed units.

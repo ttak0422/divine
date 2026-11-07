@@ -50,6 +50,99 @@ let
     };
 in
 {
+  testGeneratedPlanInvariants = {
+    expr =
+      let
+        c = package "c";
+        d = package "d";
+        plan =
+          (api.compile {
+            plugins = [
+              {
+                plugin = a;
+                dependPlugins = [
+                  b
+                  c
+                ];
+                preConfig = "local ready = true";
+                load = "vim.cmd.packadd(name)";
+                config = "local done = true";
+              }
+              {
+                plugin = b;
+                dependPlugins = [
+                  a
+                  d
+                ];
+              }
+              {
+                plugin = c;
+                dependPlugins = [ d ];
+              }
+              {
+                plugin = d;
+                dependPlugins = [ d ];
+                lazy = true;
+              }
+            ];
+            startupConfig = "vim.g.ready = true";
+          }).plan;
+        nodeIds = builtins.attrNames plan.nodes;
+        unitIds = map (unit: unit.id) plan.units;
+        members = lib.concatMap (unit: unit.members) plan.units;
+        names = map (node: node.name) (builtins.attrValues plan.nodes);
+        ordered =
+          builtins.foldl'
+            (state: unit: {
+              seen = state.seen ++ [ unit.id ];
+              valid =
+                state.valid
+                && builtins.isString unit.id
+                && builtins.isList unit.members
+                && unit.members != [ ]
+                && builtins.isList unit.dependencies
+                && lib.all (dependency: builtins.elem dependency state.seen) unit.dependencies;
+            })
+            {
+              seen = [ ];
+              valid = true;
+            }
+            plan.units;
+        callback = value: value._type == "lua-inline" && lib.hasPrefix "function(" value.expr;
+      in
+      builtins.isAttrs plan.nodes
+      && builtins.isList plan.units
+      && builtins.length unitIds == builtins.length (lib.unique unitIds)
+      && builtins.sort builtins.lessThan members == nodeIds
+      && builtins.length names == builtins.length (lib.unique names)
+      && lib.all (name: builtins.match "divine-[0-9a-f]{64}" name != null) names
+      && ordered.valid
+      && builtins.isList plan.startup_units
+      && lib.all (unit: builtins.elem unit unitIds) plan.startup_units
+      && callback plan.startup
+      && lib.all (hook: callback plan.nodes.${id a}.${hook}) [
+        "before"
+        "load"
+        "after"
+      ];
+    expected = true;
+  };
+  testRejectInvalidPreConfig = {
+    expr = builtins.deepSeq ((compileOne { preConfig = false; }).lua) true;
+    expectedError.type = "ThrownError";
+  };
+  testRejectInvalidLoad = {
+    expr = builtins.deepSeq ((compileOne { load = false; }).lua) true;
+    expectedError.type = "ThrownError";
+  };
+  testRejectInvalidStartupConfig = {
+    expr = builtins.deepSeq ((api.compile {
+      plugins = [ ];
+      startupConfig = false;
+    }).lua
+    ) true;
+    expectedError.type = "ThrownError";
+  };
   testNormalizeCommandTrigger = {
     expr = compiled.plan.nodes.${id a}.triggers.commands == [ "Example" ];
     expected = true;

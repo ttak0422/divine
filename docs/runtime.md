@@ -85,8 +85,19 @@ the unit. Reentry before preparation fails.
 
 Successful units load once through the controller. A failure is retained as a
 failed unit and is rethrown rather than retrying partly executed callbacks or
-plugin scripts. No rollback, unload or hot reload is claimed. The graph is
-validated before any trigger registration or callback execution.
+plugin scripts. No rollback, unload or hot reload is claimed.
+
+The internal `setup(plan)` entry consumes compiler-produced plans, not human
+configuration. Nix validates configuration and constructs the node records,
+unique package names, callback wrappers, SCC membership, acyclic dependencies
+and startup-unit references. The runtime indexes those units without repeating
+structural validation. Handwritten or mutated plans must satisfy the compiler
+contract; they are not a separately validated input interface. Manual controller
+`load(node_id)` and `load_unit(unit_id)` calls still reject unknown identifiers,
+and runtime reentry and retained-failure checks remain necessary. Trigger checks
+for Neovim events, command/key conflicts and other runtime conditions also remain.
+Lua source syntax and callback execution can still fail at runtime; compilation
+does not prove user code correct.
 
 ### Ordinary startup scanning is a separate phase
 

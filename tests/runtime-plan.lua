@@ -151,67 +151,21 @@ mocked["retains packadd failures without automatic retry"] = case(function(f)
   assert(not pcall(failed.load, "failure") and count == 1)
 end)
 
-mocked["rejects cycles between units before registering triggers"] = case(function(f)
-  local invalid = f.singleton("invalid")
-  invalid.units[1].dependencies = { "invalid" }
-  assert(not pcall(f.runtime.setup, invalid))
+mocked["rejects unknown manual node and unit identifiers without loading"] = case(function(f)
+  local controller = f.runtime.setup(f.singleton("known"))
+  f.trace = {}
+  local ok, err = pcall(controller.load, "unknown")
+  assert(not ok and err:find("unknown node: unknown", 1, true))
+  ok, err = pcall(controller.load_unit, "unknown")
+  assert(not ok and err:find("unknown unit: unknown", 1, true))
+  assert(controller.states.known == "unloaded")
   f.equal("")
 end)
 
-mocked["rejects unknown unit dependencies before registering triggers"] = case(function(f)
-  local invalid = f.singleton("invalid")
-  invalid.units[1].dependencies = { "missing" }
-  assert(not pcall(f.runtime.setup, invalid))
-  f.equal("")
-end)
-
-mocked["rejects a non-function load hook before registering triggers"] = case(function(f)
-  local invalid = f.singleton("invalid")
-  invalid.nodes.invalid.load = true
-  assert(not pcall(f.runtime.setup, invalid))
-  f.equal("")
-end)
-
-mocked["rejects unsafe package names before registering triggers"] = case(function(f)
-  local invalid = f.singleton("invalid")
-  invalid.nodes.invalid.name = "../unsafe"
-  assert(not pcall(f.runtime.setup, invalid))
-  f.equal("")
-end)
-
-mocked["rejects boolean startup units before registering triggers"] = case(function(f)
-  local invalid = f.singleton("invalid")
-  invalid.startup_units = false
-  assert(not pcall(f.runtime.setup, invalid))
-  f.equal("")
-end)
-
-mocked["rejects string startup units before registering triggers"] = case(function(f)
-  local invalid = f.singleton("invalid")
-  invalid.startup_units = "invalid"
-  assert(not pcall(f.runtime.setup, invalid))
-  f.equal("")
-end)
-
-mocked["rejects attribute-set startup units before registering triggers"] = case(function(f)
-  local invalid = f.singleton("invalid")
-  invalid.startup_units = { unknown = "invalid" }
-  assert(not pcall(f.runtime.setup, invalid))
-  f.equal("")
-end)
-
-mocked["rejects sparse startup units before registering triggers"] = case(function(f)
-  local invalid = f.singleton("invalid")
-  invalid.startup_units = { [2] = "invalid" }
-  assert(not pcall(f.runtime.setup, invalid))
-  f.equal("")
-end)
-
-mocked["rejects unknown startup units before registering triggers"] = case(function(f)
-  local invalid = f.singleton("invalid")
-  invalid.startup_units = { "missing" }
-  assert(not pcall(f.runtime.setup, invalid))
-  f.equal("")
+mocked["supports an empty compiled plan"] = case(function(f)
+  local controller = f.runtime.setup({ nodes = {}, units = {}, startup_units = {} })
+  assert(vim.tbl_isempty(controller.states) and vim.tbl_isempty(controller.node_units))
+  f.equal("register,activate")
 end)
 
 -- The real opt-tree case uses a fresh child with no command or trigger stubs.
