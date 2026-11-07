@@ -54,7 +54,7 @@ remove that support.
 
 ### Examples and provisional names
 
-The following is an **unimplemented syntax example** illustrating the required
+The following is an **illustrative provisional syntax example** illustrating the required
 expressiveness. `plugins`, `plugin`, `dependPlugins`, `lazy`, `preConfig`, `config`,
 `onCommands` and `extraPackages` are provisional names for reading this example,
 not finalized API names.
@@ -231,10 +231,12 @@ extracts dependency-first order and external packages. Provisional implementatio
 choices are recorded separately in [resolution.md](resolution.md); they are not
 adopted as requirements or a final API.
 
-Placement, generation, lazy triggers and SCC runtime preparation remain
-unimplemented; [TODO.md](../TODO.md) records the details. Attribute names are
-provisional. Do not treat the syntax examples as a complete, directly executable
-API.
+Opt bundle generation, explicit startup loading, five trigger prototypes and SCC
+runtime preparation are now implemented, with limitations recorded in
+[runtime.md](runtime.md). [TODO.md](../TODO.md) separates remaining coverage and
+review questions. Public names, omitted timing and detailed handoff policies are
+still provisional. The syntax example intentionally retains unresolved timing
+and is not a complete executable configuration.
 
 ## Coding rules
 

@@ -42,5 +42,6 @@ output path. Deterministic member lists are not a callback execution order.
 Implemented in [lib/resolve.nix](../../lib/resolve.nix), with ordering, cycle and
 self-dependency fixtures in [tests/resolver.nix](../../tests/resolver.nix).
 Implementation is not acceptance, and no scalability benchmark is claimed.
-SCC runtime preparation and within-unit configuration policy remain unimplemented
-and undecided respectively; this graph is not an executable Lua plan.
+SCC runtime preparation is now implemented separately, using the proposed phases
+in [ADR 0005](0005-scc-runtime-phases.md). The graph is compiled into a Lua plan;
+within-unit sequencing remains a review decision.

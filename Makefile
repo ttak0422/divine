@@ -10,3 +10,5 @@ test-nix:
 
 test-lua:
 	@NVIM_LOG_FILE="$${TMPDIR:-/tmp}/divine-test-nvim.log" nvim -u NONE --noplugin -n -i NONE -l tests/runtime.lua
+	@NVIM_LOG_FILE="$${TMPDIR:-/tmp}/divine-test-nvim.log" nvim -u NONE --noplugin -n -i NONE -l tests/runtime-plan.lua
+	@NVIM_LOG_FILE="$${TMPDIR:-/tmp}/divine-test-nvim.log" nvim -u NONE --noplugin -n -i NONE -l tests/triggers.lua

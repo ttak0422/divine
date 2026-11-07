@@ -40,13 +40,14 @@ nodes with omitted timing, even if prerequisite demand reaches them.
   defaults, inheriting a parent's flags or promoting packages to `start`.
 - Negative: A declared deferred dependency can be demanded at startup by another
   node. Consumers must distinguish declared timing from demand; runtime scheduling
-  and trigger handoff still need implementation and review.
+  and trigger handoff have provisional implementations that still need review.
 
 ## Implementation and Open Questions
 
 Implemented as graph metadata in [lib/resolve.nix](../../lib/resolve.nix), with
 startup-closure, cycle-startup, opt-placement and omitted-timing fixtures in
 [tests/resolver.nix](../../tests/resolver.nix). Implementation is not acceptance.
-The output does not load plugins or create a wrapper. Triggerless definitions,
-timing defaults and runtime handoff remain open; the existing before/load/after
+The graph is connected to startup loading through the compiler and bundle in
+[runtime.md](../runtime.md). Triggerless policy, timing defaults and detailed
+runtime handoff remain open; the existing before/load/after
 and `after/plugin` boundaries in [design.md](../design.md) are unchanged.

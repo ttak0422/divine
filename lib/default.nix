@@ -25,6 +25,8 @@ let
       map inspect entries
     else
       throw "divine prototype: expected a list of plugin definitions";
+  resolve = import ./resolve.nix { inherit lib inspectDefinitions; };
+  compile = import ./compile.nix { inherit lib resolve; };
 in
 {
   /**
@@ -54,5 +56,27 @@ in
     resolve :: { plugins :: [Package | Definition], extraPackages ? [Package], ... } -> Graph
     ```
   */
-  resolve = import ./resolve.nix { inherit lib inspectDefinitions; };
+  inherit resolve;
+
+  /**
+    Compile explicitly timed declarations into a provisional Lua runtime plan.
+
+    # Type
+
+    ```
+    compile :: Configuration -> { graph, plan, lua, runtimePaths }
+    ```
+  */
+  inherit compile;
+
+  /**
+    Build an opt-only runtime tree with an init.lua entry point.
+
+    # Type
+
+    ```
+    mkBundle :: { pkgs :: PackageSet, configuration :: Configuration } -> Derivation
+    ```
+  */
+  mkBundle = import ./bundle.nix { inherit lib compile; };
 }

@@ -11,20 +11,24 @@ item does not mean its design has been accepted.
 - [ ] **CYCLES**: review/adopt or revise finite back-references through package identity; directly cyclic Nix values remain distinct from finite cyclic graphs.
 - [x] **PLAN**: prototype finite graph normalization, SCC extraction and dependency-first load units, including cycles and self-dependencies.
 - [x] **EXTRACTION**: extract global, root and recursively nested extraPackages, preserving derivations and deduplicating by output path.
-- [ ] **UNIT-RUNTIME**: prepare every SCC member's runtime before related configuration; decide execution details within a unit.
+- [x] **UNIT-RUNTIME**: prepare every SCC member before phased configuration; sequencing remains proposed in ADR 0005.
 - [ ] **STARTUP-DEMAND**: review the prototype's dependency-closure startup demand, which retains original timing declarations and opt placement.
-- [ ] **PACKAGING**: place managed plugins and dependencies in opt; inspect the generated layout for dependency promotion.
-- [ ] **GENERATION**: emit Lua/actions from declarations and adjacent Lua files; add external executables/runtime files without plugin-specific Nix setup conversion.
-- [ ] **STARTUP**: initialize the runtime during init and explicitly load non-delayed opt entries through the same before/load/after path.
-- [ ] **EVENT**: register event triggers and preserve the first event's behavior.
-- [ ] **COMMAND**: register command triggers and hand off arguments, bang/range/modifiers and completion.
-- [ ] **FILETYPE**: handle matching filetypes and the first/current buffer.
-- [ ] **KEY**: load on a key operation and hand off the original operation; a command mapping alone is not this trigger.
-- [ ] **MODULE**: load before module resolution; decide matching scope, recursion and initial require handoff.
+- [x] **PACKAGING**: build opt-only trees for explicit configuration dependencies and check no start promotion.
+- [x] **GENERATION**: emit Lua callbacks from text/files and add recursive external tools and runtimePaths.
+- [x] **STARTUP**: generated init registers the runtime and loads explicit startup demand through the shared SCC path.
+- [ ] **EVENT**: native event prototype replays new API handlers without duplicating old ones; complete Vimscript ++once/script-context handoff.
+- [x] **COMMAND**: native command stubs and invocation/completion handoff; see runtime fixtures for verified argument forms.
+- [x] **FILETYPE**: match current/new buffers and handle new ftplugin/after-ftplugin separately.
+- [ ] **KEY**: key operation replay is implemented with normal-mode count/register and insert/visual/operator coverage; add select/terminal fixtures.
+- [x] **MODULE**: native require handoff with proposed exact/dotted namespace matching and recursion protection.
 - [ ] **DOCS**: generate configuration documentation from resolved input and record source provenance.
-- [ ] **FAILURES**: specify load state, errors and reentry for shared dependencies; test startup and every first trigger.
-- [ ] **AFTER**: integration fixtures for native after/plugin during startup, explicit opt-in sourcing after startup, and the separate FileType/after-ftplugin path.
+- [x] **FAILURES**: proposed unit states, retained errors, reentry and no automatic retry; tested with shared dependencies and native triggers.
+- [ ] **AFTER**: native startup/deferred absence and FileType/after-ftplugin fixtures exist; add explicit user opt-in after/plugin sourcing coverage.
 - [ ] **COMPATIBILITY**: test Neovim 0.12.4 separately from the development shell's Neovim.
+
+- [ ] **NATIVE-STARTUP**: review whether ordinary repeated native scanning of unguarded plugin scripts needs a future explicit alternative; current behavior is documented and tested.
+- [ ] **TEST-METHOD**: choose Nix evaluation test method separately; legacy default make runner remains unfixed, so use explicit NIXPKGS_LIB or full flake checks.
+- [ ] **REAL-PLUGINS**: validate representative third-party packages beyond synthetic opt fixtures.
 
 ## Fixed boundaries
 

@@ -59,3 +59,5 @@ settle public names, omitted timing, trigger defaults or within-unit execution.
 - [0002: Combine repeated definitions with explicit conflicts](0002-repeated-definitions.md) (`proposed`).
 - [0003: Use mutual reachability for prototype SCC extraction](0003-prototype-scc-extraction.md) (`proposed`).
 - [0004: Propagate startup demand through prerequisite units](0004-startup-demand.md) (`proposed`).
+
+- [0005: Prepare SCC runtimes before phased configuration](0005-scc-runtime-phases.md) (`proposed`).

@@ -47,6 +47,20 @@
           input-eval =
             assert (import ./tests/eval.nix { lib = pkgs.lib; }).passed;
             pkgs.runCommand "divine-input-eval" { } "touch $out";
+          bundle =
+            let
+              bundle = import ./tests/bundle.nix { inherit pkgs; };
+            in
+            pkgs.runCommand "divine-bundle-tests" { nativeBuildInputs = [ pkgs.neovim ]; } ''
+              export HOME="$TMPDIR/home"
+              mkdir -p "$HOME"
+              export NVIM_LOG_FILE="$TMPDIR/nvim.log"
+              test ! -e ${bundle}/pack/divine/start
+              test "$(find ${bundle}/pack/divine/opt -type l | wc -l | tr -d ' ')" = 3
+              nvim --headless -n -i NONE -u ${bundle}/init.lua \
+                -c 'lua dofile("${./tests/bundle.lua}")' -c 'qa!'
+              touch "$out"
+            '';
           runtime =
             pkgs.runCommand "divine-runtime-tests"
               {
@@ -57,6 +71,8 @@
                 cd source
                 export NVIM_LOG_FILE="$TMPDIR/nvim.log"
                 nvim -u NONE --noplugin -n -i NONE -l tests/runtime.lua
+                nvim -u NONE --noplugin -n -i NONE -l tests/runtime-plan.lua
+                nvim -u NONE --noplugin -n -i NONE -l tests/triggers.lua
                 touch "$out"
               '';
         }

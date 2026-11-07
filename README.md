@@ -1,57 +1,90 @@
 # divine
 
 Pure Nix declarations and a small Lua runtime for a Neovim configuration.
-This is an implementation starting point, not a usable plugin manager yet.
+This draft now builds executable opt-only bundles. Public names and several
+runtime policies remain provisional; it is not yet a stable plugin manager.
+
+## Build a configuration
+
+The provisional library accepts the same package or detailed definition at roots
+and in recursive `dependPlugins`. Compilation requires explicit load timing until
+omitted timing is decided. For example, with `pkgs` and the project's `lib` bound:
+
+```nix
+lib.mkBundle {
+  inherit pkgs;
+  configuration = {
+    plugins = [
+      {
+        plugin = pkgs.vimPlugins.telescope-nvim;
+        lazy = true;
+        dependPlugins = [
+          { plugin = pkgs.vimPlugins.plenary-nvim; lazy = true; }
+        ];
+        onCommands = "Telescope";
+        config = # lua
+          ''
+            require("telescope").setup({})
+          '';
+      }
+    ];
+    extraPackages = [ pkgs.ripgrep pkgs.fd ];
+    startupConfig = # lua
+      ''
+        vim.g.mapleader = " "
+        vim.keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>")
+      '';
+  };
+}
+```
+
+Run Neovim with `nvim -u /path/to/bundle/init.lua`. Explicit `lazy = false` entries
+stay in opt and load during init. The bundle places only explicitly declared
+configuration dependencies, without package-wrapper promotion to start.
+This example demonstrates the interface; the automated suite uses synthetic
+plugins rather than claiming telescope compatibility.
+
+See [runtime.md](docs/runtime.md) for executable plan structure, trigger syntax,
+SCC phases, failure states and native startup limitations. Ordinary packadd during
+init can be followed by another native scan of unguarded plugin scripts. The
+runtime does not automatically source deferred `after/plugin`.
 
 ## Development
 
 ```sh
 nix develop
-make test
+nix flake check --print-build-logs
 prek run --all-files
 ```
 
-`nix fmt` runs the configured formatting/lint hooks. `nix flake check` also
-evaluates the input fixtures and runs the isolated Lua tests.
-The development shell uses git-hooks.nix with prek, nixfmt, StyLua and Luacheck.
-Nix functions use nixdoc-compatible doc comments.
-The locked development tooling targets Apple Silicon macOS and aarch64/x86_64 Linux.
+`nix fmt` runs git-hooks.nix/prek with nixfmt, StyLua and Luacheck. Nix functions
+use nixdoc comments. The locked tools target Apple Silicon macOS and aarch64/x86_64
+Linux. `nix flake check --no-build --all-systems` evaluates all check definitions;
+it does not execute runtime checks or prove builds on every system.
 
-The [design snapshot](docs/design.md) records the current behavior requirements.
-[TODO.md](TODO.md) separates undecided behavior from missing implementation.
-[Architecture decision records](docs/adr/README.md) capture review decisions in
-English using a lightweight MADR 4.0 format; prototype choices stay `proposed`.
-All names in `lib/`, `lua/` and `examples/` are provisional internal scaffolding.
-There is no stable public API or Neovim package output.
-
-## What works in this draft
-
-- Inspect finite recursive inputs containing package shorthand and detailed
-  definitions at either the root or a dependency.
-- Preserve supplied metadata and repeated occurrences without choosing defaults,
-  using the standalone input inspector.
-- Resolve finite graphs into dependency-first SCC units, including cycles and
-  self-dependencies, and extract global/recursive external package requirements.
-- Diagnose conflicting settings while retaining omitted timing, provenance and
-  opt placement. [Resolution choices](docs/resolution.md) are provisional and
-  explicitly open for review.
-- Run a Lua before action, an injected/default `packadd`, then an after action.
-  No `after/plugin` sourcing is added.
-- Evaluate small Nix fixtures and run Lua tests without loading real plugins.
-
-Packaging into `opt`, startup orchestration, generated Lua, all five lazy
-triggers, runtime preparation of SCCs and generated documentation remain TODOs.
-Neither the input inspector nor the resolved graph is an executable Lua load
-plan. Missing trigger registration deliberately reports an error.
-
-## Local checks without a development shell
-
-With Nix and Neovim already installed:
+The existing Nix runner has a known limitation: plain `make test` without
+`NIXPKGS_LIB` can print `<LAMBDA>` without executing Nix assertions. A test-method
+comparison remains open; this implementation does not select a new framework or
+include the separate unapproved runner patch. Use the full flake check above, or
+explicitly provide the pinned library:
 
 ```sh
-make test NIXPKGS_LIB=/path/to/nixpkgs/lib
+NIXPKGS_LIB="$(nix eval --impure --raw --expr '(builtins.getFlake (toString ./.)).inputs.nixpkgs.outPath')/lib" make test
 ```
 
-The default is `import <nixpkgs/lib>`. These tests cover finite input inspection,
-dependency resolution and the isolated load primitive; they do not test
-packaging, lazy-trigger handoffs, real plugins, or Neovim 0.12.4 compatibility.
+The explicit path applies the fixture function; assertion failures return nonzero.
+`make test-lua` runs the isolated load primitive, opt/SCC runtime and native trigger
+fixtures. The flake also builds a fixture bundle and starts Neovim through its
+generated init, checking placement, startup, command/module handoff, after/plugin
+phases and collected tools. There is no NixOS VM or snapshot framework dependency.
+
+## Design and review
+
+- [Design requirements](docs/design.md) are the behavior contract.
+- [Dependency resolution](docs/resolution.md) explains finite graphs and SCCs.
+- [Runtime prototype](docs/runtime.md) documents current behavior and limitations.
+- [ADRs](docs/adr/README.md) retain proposed decisions separately from implementation.
+- [TODO.md](TODO.md) tracks remaining review choices and missing coverage.
+
+No design decision becomes accepted merely because a test or implementation exists.
+Third-party plugin compatibility and a separate Neovim 0.12.4 run remain unverified.

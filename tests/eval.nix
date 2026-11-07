@@ -62,6 +62,8 @@ assert
     ]
   ));
 {
-  passed = builtins.deepSeq tree (import ./resolver.nix { inherit lib; }).passed;
-  scope = "finite input inspection and SCC/dependency resolution; no runtime integration";
+  passed = builtins.deepSeq tree (
+    (import ./resolver.nix { inherit lib; }).passed && (import ./compiler.nix { inherit lib; }).passed
+  );
+  scope = "finite input inspection and SCC/dependency resolution; Lua plan compilation; runtime tested separately";
 }

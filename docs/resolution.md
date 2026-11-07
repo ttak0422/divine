@@ -1,9 +1,9 @@
 # Dependency resolution prototype — decisions for review
 
 This implements finite dependency graphs, SCC load units, dependency-first DAG
-ordering, and external-package extraction. It is not an executable Lua load plan.
+ordering, and external-package extraction. The compiler now turns an explicitly timed graph into an executable Lua load plan; see [runtime.md](runtime.md).
 Names and the following choices are provisional review decisions, not final API
-or design requirements. The runtime and lazy-trigger implementations are unchanged.
+or design requirements. Runtime sequencing and trigger handoff have their own proposed implementation boundaries.
 
 Review status and reasoning are also indexed in the [ADRs](adr/README.md):
 [identity and finite references](adr/0001-output-path-identity.md),
@@ -70,8 +70,7 @@ and topologically ordered with prerequisites before their dependents.
 Unit IDs use their smallest member output path. Independent units and member
 lists are deterministic by path. A member list is not an executable order of
 configuration callbacks within a cycle: runtime integration must prepare every
-member's runtime before the unit's related configuration. That integration and
-the within-unit configuration policy remain TODOs.
+member's runtime before the unit's related configuration. That integration is now implemented with proposed phased sequencing, documented in [runtime.md](runtime.md). The within-unit policy still needs review.
 
 The simple reachability representation uses quadratic space in the worst case.
 It favors inspectable code for initial graphs; measure before a large migration
@@ -88,7 +87,7 @@ This dependency-demand rule is a review choice, not timing-field inheritance.
 Omitted timing is not turned into a boolean. `unresolvedTiming` reports missing
 timing even when a prerequisite demand pulls that node into a startup unit.
 Triggerless deferred inputs and runtime trigger handoff are not decided here.
-The output identifies startup units; it does not load them or create a wrapper.
+The graph identifies startup units; the separate compiler and bundle connect them to the runtime.
 
 ## External packages and validation
 
@@ -105,5 +104,4 @@ root `metadata`; these names are internal prototype structure.
 Pure evaluation tests cover shorthand, detailed/nested input, diamonds, sharing,
 dependency-first order, cycles, self-dependencies, repeated and conflicting
 settings, string contexts, startup demand, and global/recursive external tools.
-No package builds, real-plugin loads, trigger replay, runtime SCC preparation or
-after/plugin behavior are claimed by these tests.
+These pure evaluation tests do not claim package builds or runtime behavior. Separate bundle and runtime fixtures cover those boundaries; see [runtime.md](runtime.md).
