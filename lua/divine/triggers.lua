@@ -50,6 +50,20 @@ local function list(value, label)
   end
 end
 
+---@param event string Validated native event name, possibly an alias.
+---@return string
+local function canonical_event(event)
+  -- Query Neovim's own event identity without executing handlers. Delete the
+  -- inert probe even when inspection fails; never leave it among dispatchers.
+  local handle = vim.api.nvim_create_autocmd(event, { command = "" })
+  local ok, result = pcall(
+    function() return vim.api.nvim_get_autocmds({ id = handle })[1].event end
+  )
+  vim.api.nvim_del_autocmd(handle)
+  if not ok then error(result, 0) end
+  return result
+end
+
 ---@class divine.EventReplay
 ---@field event string
 ---@field excluded? table<integer, boolean> Nil means dispatch every group.
@@ -168,6 +182,19 @@ function M.register(controller, nodes)
       end
     end
   end
+  -- Normalize only after every declaration passes validation, before installing
+  -- persistent stubs. Keep the caller's plan unchanged and deduplicate per node.
+  ---@type table<string, string>, table<divine.NodeId, table<string, boolean>>
+  local canonical, node_events = {}, {}
+  for _, id in ipairs(ids) do
+    local triggers = nodes[id].triggers or {}
+    local events = {}
+    for _, event in ipairs(triggers.events or {}) do
+      canonical[event] = canonical[event] or canonical_event(event)
+      events[canonical[event]] = true
+    end
+    node_events[id] = events
+  end
   ---@type table<divine.NodeId, (fun())[]>, table<divine.NodeId, boolean>, table<string, boolean>
   local cleaners, pending, module_busy = {}, {}, {}
   ---@type divine.ModuleSearcher
@@ -224,7 +251,7 @@ function M.register(controller, nodes)
           pending[id]
           and not reserved[id]
           and (
-            vim.tbl_contains(triggers.events or {}, args.event)
+            node_events[id][args.event]
             or (args.event == "FileType" and vim.tbl_contains(triggers.filetypes or {}, args.match))
           )
         then
@@ -243,7 +270,7 @@ function M.register(controller, nodes)
     pending[id], cleaners[id] = true, {}
     local triggers = nodes[id].triggers or {}
     local events = {}
-    for _, event in ipairs(triggers.events or {}) do
+    for event in pairs(node_events[id]) do
       events[event] = true
     end
     if #(triggers.filetypes or {}) > 0 then events.FileType = true end

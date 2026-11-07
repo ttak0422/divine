@@ -119,7 +119,10 @@ String triggers accept either one string or a list; omission and empty lists
 mean no trigger of that kind. These are prototype representations, not final
 schema choices.
 
-- `onEvents`: native Neovim event names. Matching pending units are loaded together,
+- `onEvents`: native Neovim event names, including aliases and case variants.
+  Names are normalized through Neovim before registration, so aliases share one
+  dispatcher and each pending target is loaded at most once per batch.
+  Matching pending units are loaded together,
   then the event is dispatched through Neovim in each eligible named augroup.
   Groups with any handler for that event before loading are excluded, even when
   the old handler's pattern does not match. Ungrouped handlers are excluded too.

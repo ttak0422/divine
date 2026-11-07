@@ -97,8 +97,8 @@ package and imports the pinned library directly with a private evaluation store,
 so its sandbox does not fetch the flake or access the host daemon. Full
 `nix flake check` executes this check, while `--no-build` does not.
 
-`make test-lua` runs 59 named mini.test cases: 6 load-primitive, 12 runtime-plan
-and 41 native-trigger cases. The development shell and `checks.<system>.runtime`
+`make test-lua` runs 65 named mini.test cases: 6 load-primitive, 12 runtime-plan
+and 47 native-trigger cases. The development shell and `checks.<system>.runtime`
 use `pkgs.vimPlugins.mini-test` (0.18.0) from the existing nixpkgs lock. It is a
 test-only dependency, never part of generated divine bundles or user runtime
 paths. No additional flake input or lock update is needed.
