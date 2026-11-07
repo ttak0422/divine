@@ -159,14 +159,34 @@ let
           name:
           builtins.hasAttr name options && options.${name}.type.check value.${name} && plain value.${name}
         ) (builtins.attrNames value);
+      /**
+        Hide a package's module discriminator in a temporary validation view.
+        The returned configuration retains the original package, unchanged.
+
+        # Type
+
+        ```
+        validationView :: a -> a
+        ```
+      */
+      validationView =
+        item:
+        if builtins.isList item then
+          map validationView item
+        else if lib.isDerivation item then
+          builtins.removeAttrs item [ "_type" ]
+        else
+          item;
       evaluated = lib.evalModules {
         modules = [
           { inherit options; }
-          { config = value; }
+          { config = lib.mapAttrs (_: validationView) value; }
         ];
       };
-      supplied = lib.genAttrs (lib.unique (required ++ builtins.attrNames value)) (
-        name: evaluated.config.${name}
+      names = lib.unique (required ++ builtins.attrNames value);
+      validated = lib.genAttrs names (name: evaluated.config.${name});
+      supplied = lib.genAttrs names (
+        name: if builtins.hasAttr name value then value.${name} else validated.${name}
       );
       # Force list element validation, but never traverse opaque packages or
       # arbitrary derivation attributes (including their dependencies).
@@ -185,7 +205,7 @@ let
           builtins.foldl' (acc: child: builtins.seq (force child) acc) true item
         else
           builtins.seq item true;
-      checked = builtins.foldl' (acc: name: builtins.seq (force supplied.${name}) acc) true (
+      checked = builtins.foldl' (acc: name: builtins.seq (force validated.${name}) acc) true (
         builtins.attrNames supplied
       );
     in

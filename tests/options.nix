@@ -61,6 +61,31 @@ in
       }
     ];
   };
+  testPreservePackageModuleMetadata = {
+    expr =
+      let
+        original = a // {
+          _type = "override";
+          priority = 1;
+          content = b;
+        };
+        result = api.compile {
+          plugins = [ original ];
+          extraPackages = [ original ];
+        };
+      in
+      builtins.deepSeq result.lua (
+        result.graph.nodes.${a.outPath}.package == original
+        && (builtins.head result.graph.extraPackages) == original
+      );
+    expected = true;
+  };
+  testDoNotEvaluatePackageModuleMetadata = {
+    expr =
+      builtins.length
+        (api.compile { plugins = [ (a // { _type = throw "opaque metadata"; }) ]; }).plan.units;
+    expected = 1;
+  };
   testNullableSchema = {
     expr =
       adapter.definitionOptions.lazy.default == null

@@ -192,6 +192,10 @@ values, compares the remaining supplied fields, and applies `true` afterward.
 `nullOr` alone does not provide this merge policy. Explicit true/false conflicts
 still fail in either order; null is not accepted as omission for other fields.
 
+Package `_type` metadata is hidden only in a temporary validation view, so the
+module evaluator cannot interpret it as an override. Returned package values
+are the originals, including that metadata; it is never evaluated for loading.
+
 Module evaluation validates each occurrence separately, rather than merging
 repeated plugins as modules. This preserves exact typed equality (including
 string context), whole-field conflicts, edge/tool unions and input locations.

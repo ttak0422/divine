@@ -15,6 +15,7 @@ suites
     expr = builtins.mapAttrs (_: suite: builtins.attrNames suite) suites;
     expected = {
       options = [
+        "testDoNotEvaluatePackageModuleMetadata"
         "testNestedNullAndStartup"
         "testNoSyntheticTriggerConflict"
         "testNullAndExplicitBothOrders"
@@ -22,6 +23,7 @@ suites
         "testNullTimingDefault"
         "testNullableSchema"
         "testOpaquePackageMetadata"
+        "testPreservePackageModuleMetadata"
         "testPreserveRawConflict"
         "testRejectDependencyModuleProperty"
         "testRejectInvalidNestedTools"
