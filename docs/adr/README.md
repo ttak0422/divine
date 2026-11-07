@@ -62,3 +62,4 @@ settle public names, omitted timing, trigger defaults or within-unit execution.
 
 - [0005: Prepare SCC runtimes before phased configuration](0005-scc-runtime-phases.md) (`proposed`).
 - [0006: Use nix-unit for Nix logic tests](0006-use-nix-unit.md) (`accepted`).
+- [0007: Use mini.test for Lua behavior tests](0007-use-mini-test.md) (`accepted`).

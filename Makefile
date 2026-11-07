@@ -13,6 +13,5 @@ test-nix:
 	@NIX_UNIT="$(NIX_UNIT)" sh tests/nix-unit-runner.sh
 
 test-lua:
-	@NVIM_LOG_FILE="$${TMPDIR:-/tmp}/divine-test-nvim.log" nvim -u NONE --noplugin -n -i NONE -l tests/runtime.lua
-	@NVIM_LOG_FILE="$${TMPDIR:-/tmp}/divine-test-nvim.log" nvim -u NONE --noplugin -n -i NONE -l tests/runtime-plan.lua
-	@NVIM_LOG_FILE="$${TMPDIR:-/tmp}/divine-test-nvim.log" nvim -u NONE --noplugin -n -i NONE -l tests/triggers.lua
+	@NVIM_LOG_FILE="$${TMPDIR:-/tmp}/divine-test-nvim.log" nvim --headless -u NONE --noplugin -n -i NONE -l tests/run.lua
+	@sh tests/mini-test-runner.sh

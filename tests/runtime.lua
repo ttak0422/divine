@@ -1,37 +1,43 @@
-package.path = "./lua/?.lua;./lua/?/init.lua;" .. package.path
-local original_cmd = vim.cmd
-local trace = {}
-local function record(value) trace[#trace + 1] = value end
-vim.cmd = { packadd = function(name) record("load:" .. name) end }
+local T, case = require("tests.helpers").new_child_set("runtime")
 
-local ok, err = pcall(function()
-  local runtime = require("divine")
-  runtime.load_one("fixture", {
-    before = function() record("before") end,
-    after = function() record("after") end,
+T["runs before, packadd and after in order"] = case(function(f)
+  f.runtime.load_one("fixture", {
+    before = function() f.record("before") end,
+    after = function() f.record("after") end,
   })
-  assert(table.concat(trace, ",") == "before,load:fixture,after")
+  f.equal("before,load:fixture,after")
+end)
 
-  trace = {}
-  assert(not pcall(runtime.load_one, "fixture", {
+T["stops before loading when before fails"] = case(function(f)
+  assert(not pcall(f.runtime.load_one, "fixture", {
     before = function() error("before failed") end,
-    load = function() record("unexpected load") end,
+    load = function() f.record("unexpected load") end,
   }))
-  assert(#trace == 0)
+  f.equal("")
+end)
 
-  assert(not pcall(runtime.load_one, "fixture", {
+T["does not run after when loading fails"] = case(function(f)
+  assert(not pcall(f.runtime.load_one, "fixture", {
     load = function() error("load failed") end,
-    after = function() record("unexpected after") end,
+    after = function() f.record("unexpected after") end,
   }))
-  assert(#trace == 0)
-  assert(not pcall(runtime.load_one, "fixture", {
-    load = function() record("loaded") end,
+  f.equal("")
+end)
+
+T["propagates after failures without undoing the load"] = case(function(f)
+  assert(not pcall(f.runtime.load_one, "fixture", {
+    load = function() f.record("loaded") end,
     after = function() error("after failed") end,
   }))
-  assert(table.concat(trace, ",") == "loaded")
-  assert(not pcall(runtime.load_one, "", {}))
-  assert(not pcall(require("divine.triggers").register, {}))
+  f.equal("loaded")
 end)
-vim.cmd = original_cmd
-assert(ok, err)
-print("runtime fixture checks passed; no plugin or after/plugin scripts sourced")
+
+T["rejects an empty package name"] = case(
+  function(f) assert(not pcall(f.runtime.load_one, "", {})) end
+)
+
+T["rejects registration without controller and nodes"] = case(
+  function() assert(not pcall(require("divine.triggers").register, {})) end
+)
+
+return T

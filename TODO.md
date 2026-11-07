@@ -28,6 +28,7 @@ item does not mean its design has been accepted.
 
 - [ ] **NATIVE-STARTUP**: review whether ordinary repeated native scanning of unguarded plugin scripts needs a future explicit alternative; current behavior is documented and tested.
 - [x] **TEST-METHOD**: adopt pinned nix-unit with named cases, expected errors, case-discovery and failure-injection guards; legacy default runner replaced.
+- [x] **LUA-TEST-METHOD**: use pinned test-only mini.test, named cases with fresh child state, explicit case discovery and nonzero-failure/cleanup guards.
 - [x] **NIXPKGS-DEPENDENCIES**: ignore implicit plugin metadata without rewriting derivations; cover two real text-object plugins, a selected shared dependency and nested tools.
 - [ ] **REAL-PLUGINS**: broaden third-party coverage beyond the text-object dependency regression and synthetic opt fixtures.
 

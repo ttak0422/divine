@@ -102,14 +102,16 @@
             pkgs.runCommand "divine-runtime-tests"
               {
                 nativeBuildInputs = [ pkgs.neovim ];
+                MINI_TEST = "${pkgs.vimPlugins.mini-test}";
               }
               ''
                 cp -R ${self} source
                 cd source
+                export HOME="$TMPDIR/home"
+                mkdir -p "$HOME"
                 export NVIM_LOG_FILE="$TMPDIR/nvim.log"
-                nvim -u NONE --noplugin -n -i NONE -l tests/runtime.lua
-                nvim -u NONE --noplugin -n -i NONE -l tests/runtime-plan.lua
-                nvim -u NONE --noplugin -n -i NONE -l tests/triggers.lua
+                nvim --headless -u NONE --noplugin -n -i NONE -l tests/run.lua
+                sh tests/mini-test-runner.sh
                 touch "$out"
               '';
         }
@@ -122,6 +124,7 @@
         in
         {
           default = pkgs.mkShell {
+            MINI_TEST = "${pkgs.vimPlugins.mini-test}";
             packages = [
               pkgs.neovim
               pkgs.nixdoc

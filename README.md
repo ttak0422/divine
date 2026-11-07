@@ -80,11 +80,12 @@ components. No additional flake input or host daemon change is needed. This is
 not a claim of testing a Lix-linked nix-unit variant. See
 [ADR 0006](docs/adr/0006-use-nix-unit.md) for the selected method and boundaries.
 
-With nix-unit and Neovim on PATH, a direct library path avoids evaluating the
-flake during local tests:
+With nix-unit and Neovim on PATH and `MINI_TEST` pointing to the pinned
+mini.test package, a direct library path avoids evaluating the flake during local
+tests:
 
 ```sh
-make test NIXPKGS_LIB=/path/to/pinned/nixpkgs/lib
+make test NIXPKGS_LIB=/path/to/pinned/nixpkgs/lib MINI_TEST=/path/to/mini.test
 ```
 
 `NIX_UNIT=/path/to/nix-unit` can select an explicit executable. CI uses the pinned
@@ -92,13 +93,33 @@ package and imports the pinned library directly with a private evaluation store,
 so its sandbox does not fetch the flake or access the host daemon. Full
 `nix flake check` executes this check, while `--no-build` does not.
 
-`make test-lua` runs the isolated load primitive, opt/SCC runtime and native trigger
-fixtures. The flake also builds a fixture bundle and starts Neovim through its
-generated init, checking placement, startup, command/module handoff, after/plugin
-phases and collected tools. A separate `nixpkgs-dependencies` check reproduces
-implicit dependency promotion with real text-object plugins and verifies divine's
-explicit-only graph, shared selected dependency and actual text-object operations.
-There is no NixOS VM or snapshot framework dependency.
+`make test-lua` runs 53 named mini.test cases: 6 load-primitive, 19 runtime-plan
+and 28 native-trigger cases. The development shell and `checks.<system>.runtime`
+use `pkgs.vimPlugins.mini-test` (0.18.0) from the existing nixpkgs lock. It is a
+test-only dependency, never part of generated divine bundles or user runtime
+paths. No additional flake input or lock update is needed.
+
+Each case starts a fresh headless Neovim process and temporary opt tree through
+mini.test setup/cleanup hooks. The child does not load mini.test. Editor state,
+module caches, command/trigger stubs, globals, buffers and package paths cannot
+leak between cases. The explicit case-name inventory in `tests/cases.lua` catches
+missing scenarios. Runner guards verify success, deliberate assertion failure,
+empty-suite and collection-error exits, including cleanup after a failing case.
+See [ADR 0007](docs/adr/0007-use-mini-test.md) for the chosen test method.
+
+To run one suite in the development shell:
+
+```sh
+nvim --headless -u NONE --noplugin -n -i NONE -l tests/run.lua tests/triggers.lua
+```
+
+The flake's bundle and `nixpkgs-dependencies` checks remain plain headless Neovim
+integration tests, without mini.test. The generated-init bundle checks placement,
+startup, command/module handoff, after/plugin phases and collected tools. The
+real text-object plugins check implicit dependency promotion, divine's
+explicit-only graph, a shared selected dependency and actual text-object
+operations. These startup/plugin phases must not be replaced by a test harness
+that changes Neovim startup. There is no NixOS VM or snapshot framework dependency.
 
 ## Design and review
 

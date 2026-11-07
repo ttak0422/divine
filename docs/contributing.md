@@ -26,6 +26,21 @@ tests distinct from isolated fixture checks.
 See the [development instructions](../README.md#development) for commands and
 [TODO.md](../TODO.md) for remaining test coverage.
 
+### Lua tests
+
+Use mini.test named cases for the three Lua suites, run with `make test-lua` in
+`nix develop`. Add each scenario to the explicit inventory in `tests/cases.lua`;
+an empty suite or a missing expected case must fail. `tests/helpers.lua` starts a
+fresh Neovim child and temporary fixture tree per case and cleans both up after
+failures. Child callbacks use their fixture argument, rather than captured Lua
+upvalues, because they execute in another process.
+
+Keep mini.test test-only, pinned through the existing nixpkgs lock. Do not load
+it into the child editor or the generated runtime bundle. Preserve the separate
+plain headless bundle/startup and real-plugin checks. The mini.test runner guard
+must keep verifying nonzero assertion, empty-suite and collection-error results,
+not merely successful test execution.
+
 ### Nix types
 
 Document Nix implementation functions with nixdoc comments and explicit `# Type`
