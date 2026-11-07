@@ -132,7 +132,11 @@ in
       builtins.deepSeq [ result.lua reversed.lua ] (
         !result.graph.nodes.${id a}.settings.lazy
         && result.graph.nodes.${id b}.settings.lazy
-        && result.plan.startup_units == [ (id b) (id a) ]
+        &&
+          result.plan.startup_units == [
+            (id b)
+            (id a)
+          ]
         && reversed.plan == result.plan
       );
     expected = true;

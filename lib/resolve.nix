@@ -200,7 +200,10 @@ let
     let
       # Apply the default after merging so shorthand does not conflict with an
       # explicit declaration of the same package elsewhere in the graph.
-      settings = { lazy = true; } // (mergeSettings id declarations).values;
+      settings = {
+        lazy = true;
+      }
+      // (mergeSettings id declarations).values;
       dependencies = concatLists (
         map (
           o:

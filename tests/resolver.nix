@@ -370,6 +370,7 @@ in
         ]
       &&
         repeated.nodes.${id a}.settings == {
+          lazy = true;
           config = "same()";
           preConfig = "before()";
         }

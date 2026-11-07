@@ -71,7 +71,7 @@ it does not execute the nix-unit or runtime tests or prove builds on every syste
 `make test-nix` runs the locked flake's named suite through nix-unit, then tests
 the runner's success, mismatch and unexpected-error exit behavior. It replaces
 the previous default path that printed `<LAMBDA>` without executing assertions.
-The suite contains 10 input, 30 resolver and 14 compiler cases, plus a discovery
+The suite contains 10 input, 30 resolver and 16 compiler cases, plus a discovery
 regression that checks every expected case name to prevent empty suites from
 passing unnoticed. Evaluation failures use nix-unit's `expectedError` contract.
 
