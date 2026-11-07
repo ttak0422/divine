@@ -258,11 +258,18 @@ Follow the rules provided by git-hooks.nix (prek).
 
 ### Nix
 
-- Follow [nixdoc](https://github.com/nix-community/nixdoc).
+- Follow [nixdoc](https://github.com/nix-community/nixdoc), with explicit `# Type`
+  signatures for implementation functions; see [the type reference](nix-types.md).
 
 ### Lua
 
+- Use [LuaLS annotations](https://luals.github.io/wiki/annotations/)
+  to describe implementation function contracts and shared data types.
 - Favor concise, one-line-style expressions where the linter and formatter allow.
+
+Tests do not require type comments in either language. See
+[contributing.md](contributing.md#coding-and-validation) for annotation and
+validation guidance.
 
 ## Supported scope
 

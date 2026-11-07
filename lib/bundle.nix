@@ -1,3 +1,16 @@
+/**
+  Construct the opt-only bundle builder from the library and plan compiler.
+
+  Named types are documented in ../docs/nix-types.md. The result is a
+  derivation whose passthru graph is the resolved Graph; it is not a wrapped
+  Neovim package.
+
+  # Type
+
+  ```
+  import ./bundle.nix :: { lib :: AttrSet, compile :: CompilationConfiguration -> Compiled } -> { pkgs :: PackageSet, configuration :: CompilationConfiguration } -> Derivation
+  ```
+*/
 { lib, compile }:
 { pkgs, configuration }:
 let

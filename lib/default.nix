@@ -1,5 +1,16 @@
 { lib }:
 let
+  /**
+    Inspect one finite package/definition tree without assigning defaults.
+
+    Named types are documented in ../docs/nix-types.md.
+
+    # Type
+
+    ```
+    inspect :: (Package | Definition) -> InspectedDefinition
+    ```
+  */
   inspect =
     entry:
     let
@@ -53,7 +64,7 @@ in
     # Type
 
     ```
-    resolve :: { plugins :: [Package | Definition], extraPackages ? [Package], ... } -> Graph
+    resolve :: Configuration -> Graph
     ```
   */
   inherit resolve;
@@ -64,7 +75,7 @@ in
     # Type
 
     ```
-    compile :: Configuration -> { graph, plan, lua, runtimePaths }
+    compile :: CompilationConfiguration -> Compiled
     ```
   */
   inherit compile;
@@ -75,7 +86,7 @@ in
     # Type
 
     ```
-    mkBundle :: { pkgs :: PackageSet, configuration :: Configuration } -> Derivation
+    mkBundle :: { pkgs :: PackageSet, configuration :: CompilationConfiguration } -> Derivation
     ```
   */
   mkBundle = import ./bundle.nix { inherit lib compile; };

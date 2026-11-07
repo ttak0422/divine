@@ -1,3 +1,15 @@
+/**
+  Construct the resolver from the Nixpkgs library and definition inspector.
+
+  Named types are documented in ../docs/nix-types.md. Unknown root fields and
+  settings are retained; only explicit dependPlugins create graph edges.
+
+  # Type
+
+  ```
+  import ./resolve.nix :: { lib :: AttrSet, inspectDefinitions :: [Package | Definition] -> [InspectedDefinition] } -> Configuration -> Graph
+  ```
+*/
 { lib, inspectDefinitions }:
 request@{
   plugins,
@@ -13,10 +25,40 @@ let
     listToAttrs
     mapAttrs
     ;
+  /**
+    Raise a resolver diagnostic; this function never returns a value.
+
+    # Type
+
+    ```
+    fail :: String -> a
+    ```
+  */
   fail = message: throw "divine resolver: ${message}";
+  /**
+    Return the context-free output-path identity of a package.
+
+    # Type
+
+    ```
+    key :: Package -> String
+    ```
+  */
   # Provisional identity, not a final consumer API: see docs/resolution.md.
   # IDs must be context-free; original package values retain their build dependencies.
   key = package: builtins.unsafeDiscardStringContext (toString package);
+  /**
+    Compare values recursively, including the build context of strings.
+
+    Unequal Nix types return false. Evaluation or comparison can throw;
+    mergeSettings catches failures and reports a conflicting setting.
+
+    # Type
+
+    ```
+    sameValue :: a -> b -> Bool
+    ```
+  */
   sameValue =
     a: b:
     if builtins.typeOf a != builtins.typeOf b then
@@ -32,6 +74,15 @@ let
         attrNames a == attrNames b && lib.all (name: sameValue a.${name} b.${name}) (attrNames a)
     else
       a == b;
+  /**
+    Deduplicate and lexically sort context-free string identifiers.
+
+    # Type
+
+    ```
+    sortedUnique :: [String] -> [String]
+    ```
+  */
   sortedUnique =
     values:
     attrNames (
@@ -42,6 +93,18 @@ let
         }) values
       )
     );
+  /**
+    Validate a package list, deduplicate by output path and sort by that path.
+
+    The first argument is the diagnostic context. Preserve the first package
+    value for each identity, including its original derivation attributes.
+
+    # Type
+
+    ```
+    packageSet :: String -> [Package] -> [Package]
+    ```
+  */
   packageSet =
     context: values:
     if !builtins.isList values || !lib.all lib.isDerivation values then
@@ -54,6 +117,15 @@ let
       in
       map (id: indexed.${id}) (attrNames indexed);
 
+  /**
+    Flatten an inspected tree into occurrences with their input locations.
+
+    # Type
+
+    ```
+    collect :: String -> InspectedDefinition -> [Occurrence]
+    ```
+  */
   collect =
     origin: node:
     [
@@ -72,6 +144,18 @@ let
     acc: occurrence: acc // { ${occurrence.id} = (acc.${occurrence.id} or [ ]) ++ [ occurrence ]; }
   ) { } occurrences;
 
+  /**
+    Merge equal settings for one identity and retain each field's first origin.
+
+    Conflicting or incomparable values throw. Dependencies and external
+    packages are collected separately, rather than included in values.
+
+    # Type
+
+    ```
+    mergeSettings :: String -> [Occurrence] -> { values :: AttrSet, origins :: AttrsOf String }
+    ```
+  */
   mergeSettings =
     id: declarations:
     foldl'
@@ -137,6 +221,17 @@ let
   ) groups;
   ids = attrNames nodes;
 
+  /**
+    Find all reachable identifiers, including starts, without revisiting cycles.
+
+    The first argument returns outgoing edges for an identifier.
+
+    # Type
+
+    ```
+    closure :: (String -> [String]) -> [String] -> [String]
+    ```
+  */
   closure =
     edges: starts:
     map (entry: entry.key) (

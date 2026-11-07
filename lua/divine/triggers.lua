@@ -1,6 +1,54 @@
+---@alias divine.KeyMode 'n'|'x'|'s'|'o'|'i'|'t'
+---@alias divine.Cleanup fun(id: divine.NodeId)
+---@alias divine.Activate fun()
+---@alias divine.ModuleSearcher fun(name: string): (fun(): any)|string
+
+---@class divine.KeyTrigger
+---@field lhs string Nonempty key sequence; expanded after startup configuration.
+---@field mode? divine.KeyMode Defaults to normal mode.
+
+---@class divine.Triggers
+---@field events? string[] Native Neovim event names.
+---@field commands? string[] Full user-command names.
+---@field filetypes? string[] Exact filetype names.
+---@field keys? divine.KeyTrigger[]
+---@field modules? string[] Exact module names or dotted namespace prefixes.
+
+---@class divine.TriggerNode
+---@field triggers? divine.Triggers
+
+---@class divine.TriggerController
+---@field load fun(id: divine.NodeId)
+
+-- Startup FileType replay synthesizes this context without an autocmd ID/group.
+---@class divine.ReplayContext
+---@field id? integer
+---@field group? integer
+---@field event string
+---@field match string
+---@field buf integer
+---@field file? string
+---@field data? any Event payload is supplied by Neovim or the caller.
+
+---@alias divine.EventContext divine.ReplayContext|vim.api.keyset.create_autocmd.callback_args
+
+-- Replay probes optional legacy fields absent from current generated metadata.
+-- The callback union and group name follow nvim_get_autocmds() documentation.
+---@class divine.Autocmd: vim.api.keyset.get_autocmds.ret
+---@field buffer? integer
+---@field nested? boolean
+---@field group_name? string
+---@field callback? (fun(args: divine.EventContext): any)|string
+
 local M = {}
 
+---@param message string
+---Always raises; no successful return.
+---@return nil
 local function fail(message) error("divine triggers: " .. message, 0) end
+---@param value any Untrusted trigger list, validated before registration.
+---@param label string
+---@return nil
 local function list(value, label)
   if type(value) ~= "table" or not vim.islist(value) then fail(label .. " must be a list") end
   for _, item in ipairs(value) do
@@ -12,6 +60,8 @@ end
 
 -- Replay only handlers installed by this load. Replaying their entire original
 -- augroups would also run unrelated, already executed handlers a second time.
+---@param autocmd divine.Autocmd
+---@return string
 local function identity(autocmd)
   return vim.inspect({
     autocmd.id,
@@ -24,12 +74,18 @@ local function identity(autocmd)
 end
 
 local replay_serial = 0
+---@param event string
+---@param args divine.EventContext
+---@param before table<string, integer> Identity counts consumed during replay.
+---@return nil
 local function replay(event, args, before)
   for _, autocmd in ipairs(vim.api.nvim_get_autocmds({ event = event })) do
+    ---@cast autocmd divine.Autocmd
     local signature = identity(autocmd)
     if (before[signature] or 0) > 0 then
       before[signature] = before[signature] - 1
     else
+      ---@type vim.api.keyset.create_autocmd
       local options = { once = true, nested = autocmd.nested or false }
       if autocmd.buffer then
         options.buffer = autocmd.buffer
@@ -57,6 +113,7 @@ local function replay(event, args, before)
       local group = vim.api.nvim_create_augroup("divine_replay_" .. replay_serial, { clear = true })
       options.group = group
       vim.api.nvim_create_autocmd(event, options)
+      ---@type vim.api.keyset.exec_autocmds
       local execution = { group = group, modeline = false, data = args.data }
       if autocmd.buffer then
         execution.buffer = args.buf
@@ -74,6 +131,10 @@ local function replay(event, args, before)
   end
 end
 
+---@param controller divine.TriggerController Only load(node_id) is required.
+---@param nodes table<divine.NodeId, divine.TriggerNode>
+---@return divine.Cleanup cleanup Removes a node's remaining trigger stubs.
+---@return divine.Activate activate Installs pending keys and handles open filetypes once.
 function M.register(controller, nodes)
   if
     type(controller) ~= "table"
@@ -84,6 +145,7 @@ function M.register(controller, nodes)
   end
   local ids = vim.tbl_keys(nodes)
   table.sort(ids)
+  ---@type table<string, boolean>, table<string, boolean>, boolean
   local commands, keys, has_modules = {}, {}, false
   -- Validate the full registration before changing editor state.
   for _, id in ipairs(ids) do
@@ -128,8 +190,12 @@ function M.register(controller, nodes)
       end
     end
   end
+  ---@type table<divine.NodeId, (fun())[]>, table<divine.NodeId, boolean>, table<string, boolean>
   local cleaners, pending, module_busy = {}, {}, {}
+  ---@type divine.ModuleSearcher
   local searcher
+  ---@param id divine.NodeId
+  ---@return nil
   local function cleanup(id)
     if not pending[id] then return end
     pending[id] = nil
@@ -137,19 +203,29 @@ function M.register(controller, nodes)
       remove()
     end
   end
+  ---@param id divine.NodeId
+  ---@return nil
   local function load(id)
     cleanup(id)
     controller.load(id)
   end
+  ---@param id divine.NodeId
+  ---@param args divine.EventContext
+  ---@return nil
   local function on_event(id, args)
+    ---@type table<string, integer>
     local before = {}
     for _, item in ipairs(vim.api.nvim_get_autocmds({ event = args.event })) do
+      ---@cast item divine.Autocmd
       local signature = identity(item)
       before[signature] = (before[signature] or 0) + 1
     end
     load(id)
     replay(args.event, args, before)
   end
+  ---@param paths table<string, boolean> Runtime paths present before loading.
+  ---@param buffer integer
+  ---@return nil
   local function source_ftplugins(paths, buffer)
     if vim.g.did_load_ftplugin ~= 1 then return end
     vim.api.nvim_buf_call(buffer, function()
@@ -176,12 +252,16 @@ function M.register(controller, nodes)
       vim.b.did_ftplugin = vim.b.did_ftplugin or did
     end)
   end
+  ---@param id divine.NodeId
+  ---@param args divine.EventContext
+  ---@return nil
   local function on_filetype(id, args)
     local native_pending, seen_trigger = false, false
     for _, item in ipairs(vim.api.nvim_get_autocmds({ event = "FileType" })) do
       if args.id and item.id == args.id then seen_trigger = true end
       if seen_trigger and item.group_name == "filetypeplugin" then native_pending = true end
     end
+    ---@type table<string, boolean>
     local paths = {}
     for _, path in ipairs(vim.api.nvim_list_runtime_paths()) do
       paths[path] = true
@@ -193,6 +273,9 @@ function M.register(controller, nodes)
   for _, id in ipairs(ids) do
     pending[id], cleaners[id] = true, {}
     local triggers = nodes[id].triggers or {}
+    ---@param event string
+    ---@param options vim.api.keyset.create_autocmd
+    ---@return nil
     local function autocmd(event, options)
       local handle = vim.api.nvim_create_autocmd(event, options)
       table.insert(cleaners[id], function() pcall(vim.api.nvim_del_autocmd, handle) end)
@@ -237,11 +320,14 @@ function M.register(controller, nodes)
       end)
     end
   end
+  ---@param id divine.NodeId
+  ---@return nil
   local function install_keys(id)
     local triggers = nodes[id].triggers or {}
     for _, key in ipairs(triggers.keys or {}) do
       local mode = key.mode or "n"
       local lhs = key.lhs
+      ---@return nil
       local function callback()
         local count, register, operator = vim.v.count, vim.v.register, vim.v.operator
         load(id)
@@ -268,6 +354,8 @@ function M.register(controller, nodes)
       end)
     end
   end
+  ---@param name string
+  ---@return (fun(): any)|string loader_or_error
   searcher = function(name)
     if module_busy[name] then return "\n\tdivine: recursive module lookup " .. name end
     module_busy[name] = true
@@ -296,10 +384,12 @@ function M.register(controller, nodes)
   -- next searcher index. It becomes inert once all nodes have been cleaned.
   if has_modules then table.insert(package.loaders, 2, searcher) end
   local activated = false
+  ---@return nil
   local function activate()
     if activated then return end
     -- Startup configuration may change mapleader or install mappings. Validate
     -- every pending key against that final state before installing any stubs.
+    ---@type table<string, boolean>
     local expanded = {}
     for _, id in ipairs(ids) do
       if pending[id] then
@@ -317,8 +407,10 @@ function M.register(controller, nodes)
     for _, id in ipairs(ids) do
       if pending[id] then install_keys(id) end
     end
+    ---@type table<string, boolean>, table<integer, string>, table<divine.NodeId, integer>, table<string, integer>
     local paths, matches, targets, before = {}, {}, {}, {}
     for _, item in ipairs(vim.api.nvim_get_autocmds({ event = "FileType" })) do
+      ---@cast item divine.Autocmd
       local signature = identity(item)
       before[signature] = (before[signature] or 0) + 1
     end

@@ -61,7 +61,10 @@ prek run --all-files
 ```
 
 `nix fmt` runs git-hooks.nix/prek with nixfmt, StyLua and Luacheck. Nix functions
-use nixdoc comments. The locked tools target Apple Silicon macOS and aarch64/x86_64
+use nixdoc type comments; [the type reference](docs/nix-types.md) describes their
+input and result shapes. Lua implementation uses LuaLS annotations, following
+[the coding rules](docs/contributing.md#lua-types). Test functions do not need
+type comments in either language. The locked tools target Apple Silicon macOS and aarch64/x86_64
 Linux. `nix flake check --no-build --all-systems` evaluates all check definitions;
 it does not execute the nix-unit or runtime tests or prove builds on every system.
 

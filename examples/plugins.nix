@@ -1,4 +1,17 @@
 # Provisional input example, not an executable load plan.
+/**
+  Build illustrative declarations from a Nixpkgs package set.
+
+  Timing remains unresolved for package shorthand, so the result is a resolver
+  Configuration rather than a complete CompilationConfiguration.
+  Named types are documented in ../docs/nix-types.md.
+
+  # Type
+
+  ```
+  import ./examples/plugins.nix :: { pkgs :: PackageSet, ... } -> Configuration
+  ```
+*/
 { pkgs, ... }:
 {
   plugins = [

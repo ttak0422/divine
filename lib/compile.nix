@@ -1,7 +1,28 @@
+/**
+  Construct the runtime-plan compiler from the Nixpkgs library and resolver.
+
+  Named types are documented in ../docs/nix-types.md. The result contains Nix
+  plan data and serialized Lua text, not executable Nix callback functions.
+
+  # Type
+
+  ```
+  import ./compile.nix :: { lib :: AttrSet, resolve :: Configuration -> Graph } -> CompilationConfiguration -> Compiled
+  ```
+*/
 { lib, resolve }:
 configuration:
 let
   graph = resolve configuration;
+  /**
+    Raise a compiler diagnostic; this function never returns a value.
+
+    # Type
+
+    ```
+    fail :: String -> a
+    ```
+  */
   fail = message: throw "divine compiler: ${message}";
   allowed = [
     "lazy"
@@ -14,6 +35,15 @@ let
     "onKeys"
     "onModules"
   ];
+  /**
+    Read Lua text directly or from a Nix path, with a diagnostic context.
+
+    # Type
+
+    ```
+    source :: String -> (String | Path) -> String
+    ```
+  */
   source =
     context: value:
     if builtins.isString value then
@@ -22,9 +52,33 @@ let
       builtins.readFile value
     else
       fail "${context} must be Lua text or a Lua file path";
+  /**
+    Wrap Lua source in a function expression for the Lua serializer.
+
+    Arguments are the diagnostic context, Lua parameter text and Lua source.
+    LuaInline is an attribute set with _type and expr, not a Nix function.
+
+    # Type
+
+    ```
+    callback :: String -> String -> (String | Path) -> LuaInline
+    ```
+  */
   callback =
     context: arguments: value:
     lib.generators.mkLuaInline "function(${arguments})\n${source context value}\nend";
+  /**
+    Normalize one nonempty condition or a list into unique condition strings.
+
+    The first argument is the diagnostic context. An empty list is valid;
+    empty strings and non-string list elements throw.
+
+    # Type
+
+    ```
+    conditions :: String -> (String | [String]) -> [String]
+    ```
+  */
   conditions =
     context: value:
     let
@@ -34,10 +88,32 @@ let
       lib.unique values
     else
       fail "${context} must be a string or a list of nonempty strings";
+  /**
+    Normalize one key declaration or a list of declarations.
+
+    The first argument is the diagnostic context. An empty list is valid.
+
+    # Type
+
+    ```
+    keys :: String -> (KeyInput | [KeyInput]) -> [Key]
+    ```
+  */
   keys =
     context: value:
     let
       entries = if builtins.isString value || builtins.isAttrs value then [ value ] else value;
+      /**
+        Normalize one nonempty key, defaulting an omitted mode to normal mode.
+
+        Only lhs and mode are accepted in an attribute-set declaration.
+
+        # Type
+
+        ```
+        normalize :: KeyInput -> Key
+        ```
+      */
       normalize =
         entry:
         if builtins.isString entry && entry != "" then

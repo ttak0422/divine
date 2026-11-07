@@ -9,6 +9,15 @@
     };
   };
 
+  /**
+    Define the library, test suite and per-system development/build outputs.
+
+    # Type
+
+    ```
+    outputs :: { self :: AttrSet, nixpkgs :: AttrSet, git-hooks :: AttrSet } -> AttrSet
+    ```
+  */
   outputs =
     {
       self,
@@ -21,7 +30,28 @@
         "aarch64-linux"
         "x86_64-linux"
       ];
+      /**
+        Map a function over the supported system strings into a system-keyed set.
+
+        # Type
+
+        ```
+        eachSystem :: (String -> a) -> AttrsOf a
+        ```
+      */
       eachSystem = nixpkgs.lib.genAttrs systems;
+      /**
+        Build the style-check derivation for one supported system.
+
+        The git-hooks.nix result also exposes config, enabledPackages and
+        shellHook through passthru for the development shell and formatter.
+
+        # Type
+
+        ```
+        hooksFor :: String -> Derivation
+        ```
+      */
       hooksFor =
         system:
         git-hooks.lib.${system}.run {
