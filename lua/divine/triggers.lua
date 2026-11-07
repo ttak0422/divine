@@ -1,4 +1,4 @@
----@alias divine.KeyMode 'n'|'x'|'s'|'o'|'i'|'t'
+---@alias divine.KeyMode 'n'|'x'|'s'|'i'|'t'
 ---@alias divine.Cleanup fun(id: divine.NodeId)
 ---@alias divine.Activate fun()
 ---@alias divine.ModuleSearcher fun(name: string): (fun(): any)|string
@@ -141,7 +141,10 @@ function M.register(controller, nodes)
             if field ~= "lhs" and field ~= "mode" then fail("unknown key field " .. field) end
           end
           local mode = key.mode or "n"
-          if not vim.tbl_contains({ "n", "x", "s", "o", "i", "t" }, mode) then
+          if mode == "o" then
+            fail("operator-pending lazy keys are unsupported; load the target at startup instead")
+          end
+          if not vim.tbl_contains({ "n", "x", "s", "i", "t" }, mode) then
             fail("unsupported key mode " .. tostring(mode))
           end
           local signature = mode .. ":" .. key.lhs
@@ -189,6 +192,28 @@ function M.register(controller, nodes)
   end
   ---@type table<string, boolean>
   local event_busy = {}
+  ---@type table<divine.NodeId, boolean>
+  local reserved = {}
+  ---@param targets divine.NodeId[]
+  ---@param attempt fun(id: divine.NodeId)
+  ---@return nil
+  local function load_batch(targets, attempt)
+    -- Suppress nested event dispatch without deleting unattempted stubs. A
+    -- failed load is terminal, but unrelated targets must remain reachable.
+    for _, id in ipairs(targets) do
+      reserved[id] = true
+    end
+    local ok, err = pcall(function()
+      for _, id in ipairs(targets) do
+        -- A dependency or SCC peer may already have cleaned this target.
+        if pending[id] then attempt(id) end
+      end
+    end)
+    for _, id in ipairs(targets) do
+      reserved[id] = nil
+    end
+    if not ok then error(err, 0) end
+  end
   ---@param args divine.EventContext
   ---@return nil
   local function on_event(args)
@@ -200,6 +225,7 @@ function M.register(controller, nodes)
         local triggers = nodes[id].triggers or {}
         if
           pending[id]
+          and not reserved[id]
           and (
             vim.tbl_contains(triggers.events or {}, args.event)
             or (args.event == "FileType" and vim.tbl_contains(triggers.filetypes or {}, args.match))
@@ -208,37 +234,35 @@ function M.register(controller, nodes)
           targets[#targets + 1] = id
         end
       end
-      -- Remove all participating stubs before loading can cause nested events.
-      for _, id in ipairs(targets) do
-        cleanup(id)
-      end
-      for _, id in ipairs(targets) do
-        controller.load(id)
-      end
+      load_batch(targets, load)
       if #targets > 0 then replay(before, args) end
     end)
     event_busy[args.event] = nil
     if not ok then error(err, 0) end
   end
+  ---@type table<string, { handle: integer, count: integer }>
+  local event_handles = {}
   for _, id in ipairs(ids) do
     pending[id], cleaners[id] = true, {}
     local triggers = nodes[id].triggers or {}
-    ---@param event string
-    ---@param options vim.api.keyset.create_autocmd
-    ---@return nil
-    local function autocmd(event, options)
-      local handle = vim.api.nvim_create_autocmd(event, options)
-      table.insert(cleaners[id], function() pcall(vim.api.nvim_del_autocmd, handle) end)
-    end
+    local events = {}
     for _, event in ipairs(triggers.events or {}) do
-      autocmd(event, { callback = on_event })
+      events[event] = true
     end
-    if #(triggers.filetypes or {}) > 0 then
-      autocmd("FileType", {
-        callback = function(args)
-          if vim.tbl_contains(triggers.filetypes, args.match) then on_event(args) end
-        end,
-      })
+    if #(triggers.filetypes or {}) > 0 then events.FileType = true end
+    for event in pairs(events) do
+      local entry = event_handles[event]
+      if not entry then
+        -- One dispatcher per event also preserves fail-fast behavior: Neovim
+        -- continues other autocmd callbacks after reporting a Lua error.
+        entry = { handle = vim.api.nvim_create_autocmd(event, { callback = on_event }), count = 0 }
+        event_handles[event] = entry
+      end
+      entry.count = entry.count + 1
+      table.insert(cleaners[id], function()
+        entry.count = entry.count - 1
+        if entry.count == 0 then pcall(vim.api.nvim_del_autocmd, entry.handle) end
+      end)
     end
     for _, name in ipairs(triggers.commands or {}) do
       vim.api.nvim_create_user_command(name, function(args)
@@ -279,14 +303,13 @@ function M.register(controller, nodes)
       local lhs = key.lhs
       ---@return nil
       local function callback()
-        local count, register, operator = vim.v.count, vim.v.register, vim.v.operator
+        local count, register = vim.v.count, vim.v.register
         load(id)
         local prefix = ""
-        if mode == "n" or mode == "x" or mode == "o" then
+        if mode == "n" or mode == "x" then
           if register ~= '"' then prefix = '"' .. register end
           if count > 0 then prefix = prefix .. count end
         end
-        if mode == "o" then prefix = "<Esc>" .. prefix .. operator end
         vim.api.nvim_feedkeys(
           vim.api.nvim_replace_termcodes(prefix .. lhs, true, false, true),
           "mi",
@@ -374,15 +397,15 @@ function M.register(controller, nodes)
         end
       end
     end
-    for id in pairs(targets) do
-      cleanup(id)
+    local ordered = {}
+    for _, id in ipairs(ids) do
+      if targets[id] then ordered[#ordered + 1] = id end
     end
     event_busy.FileType = true
     local ok, err = pcall(function()
-      for _, id in ipairs(ids) do
-        local buffer = targets[id]
-        if buffer then vim.api.nvim_buf_call(buffer, function() controller.load(id) end) end
-      end
+      load_batch(ordered, function(id)
+        vim.api.nvim_buf_call(targets[id], function() load(id) end)
+      end)
       local buffers = vim.tbl_keys(matches)
       table.sort(buffers)
       for _, buffer in ipairs(buffers) do

@@ -123,14 +123,23 @@ schema choices.
   loader handles ftplugin and after/ftplugin; no manual source pass is added.
 - `onKeys`: a key string (normal mode), `{ lhs = "..."; mode = "n"; }`, or a list
   of either. The original operation is fed back after loading; normal-mode count
-  and register handling are tested, along with insert, visual and operator-pending
-  operations. Select and terminal mode coverage remains open.
+  and register handling are tested, along with insert and visual operations.
+  Operator-pending lazy keys (`mode = "o"`) are rejected before registration:
+  replay cannot safely preserve every pending operation. Load the target at
+  startup and let it define its own operator-pending mappings instead.
+  Select and terminal mode coverage remains open.
 - `onModules`: exact Lua module names or dotted namespace prefixes. `foo` matches
   `foo` and `foo.bar`, not `foobar`. The existing Lua searcher chain resumes after
   preparation. Matching plugin names is never substituted for module names.
 
 Duplicate command/key ownership and existing command/key conflicts fail rather
 than replacing unrelated user definitions. Events may demand several units.
+Event and current-filetype batches stop at the first load failure without
+replaying that batch. Targets not yet attempted retain their triggers, so an
+independent target can load on a later trigger. This is not retry of a failed
+unit: failed units still retain and rethrow their original error. Pending batch
+targets are reserved against nested event dispatch, and targets already loaded
+as dependencies or SCC peers are skipped.
 Key conflicts are checked as a batch after startup configuration, before any key
 stubs are installed. This avoids binding a stale mapleader, but means a conflict
 can be reported after startup callbacks have run. Further key-mode and event

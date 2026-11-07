@@ -105,7 +105,7 @@ may omit it or use `null` to leave timing unspecified. The resolver's conflict a
 ```text
 LuaSource = String | Path
 Conditions = String | [String]
-KeyMode = "n" | "i" | "x" | "s" | "o" | "t"
+KeyMode = "n" | "i" | "x" | "s" | "t"
 KeyInput = String | { lhs :: String, mode? :: KeyMode }
 Key = { lhs :: String, mode :: KeyMode }
 CompilationDefinition = {

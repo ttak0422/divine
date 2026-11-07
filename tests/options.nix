@@ -246,6 +246,17 @@ in
       }
     ];
   };
+  testRejectOperatorPendingKeyMode = invalid {
+    plugins = [
+      {
+        plugin = a;
+        onKeys = {
+          lhs = "x";
+          mode = "o";
+        };
+      }
+    ];
+  };
   testRejectUnknownKey = invalid {
     plugins = [
       {

@@ -139,7 +139,6 @@ let
             "i"
             "x"
             "s"
-            "o"
             "t"
           ]
         then
@@ -148,7 +147,7 @@ let
             mode = entry.mode or "n";
           }
         else
-          fail "${context} entries need lhs and an optional single mode (n/i/x/s/o/t)";
+          fail "${context} entries need lhs and an optional single mode (n/i/x/s/t; operator-pending keys are unsupported)";
     in
     if builtins.isList entries then
       map normalize entries

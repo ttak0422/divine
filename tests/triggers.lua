@@ -326,13 +326,18 @@ T["hands off visual-mode keys"] = case(function(f)
   assert(count() == 1 and vim.api.nvim_get_current_line() == "WORD")
 end)
 
-T["hands off operator-pending keys"] = case(function(f)
-  f.write("operatorkey", "plugin/key.lua", { 'vim.keymap.set("o", "<F14>", "iw")' })
-  local count = f.setup("operatorkey", { keys = { { lhs = "<F14>", mode = "o" } } })
-  vim.api.nvim_buf_set_lines(0, 0, -1, false, { "word remains" })
-  vim.api.nvim_win_set_cursor(0, { 1, 0 })
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("d<F14>", true, false, true), "xt", false)
-  assert(count() == 1 and vim.api.nvim_get_current_line() == " remains")
+T["rejects operator-pending keys before installing any triggers"] = case(function(f)
+  vim.keymap.set("o", "<F14>", "iw")
+  local mapping = vim.fn.maparg("<F14>", "o", false, true)
+  local before = vim.api.nvim_get_autocmds({ event = "User" })
+  local ok, err = pcall(f.triggers.register, { load = function() error("unexpected load") end }, {
+    a = { triggers = { events = { "User" }, commands = { "DivineUninstalled" } } },
+    z = { triggers = { keys = { { lhs = "<F14>", mode = "o" } } } },
+  })
+  assert(not ok and tostring(err):find("operator-pending lazy keys are unsupported", 1, true))
+  assert(vim.fn.exists(":DivineUninstalled") == 0)
+  assert(vim.deep_equal(vim.api.nvim_get_autocmds({ event = "User" }), before))
+  assert(vim.deep_equal(vim.fn.maparg("<F14>", "o", false, true), mapping))
 end)
 
 T["expands leader keys after common startup configuration"] = case(function(f)
@@ -542,6 +547,119 @@ T["preserves native callback removal"] = case(function(f)
   vim.api.nvim_exec_autocmds("User", { pattern = "DivineRemove" })
   vim.api.nvim_exec_autocmds("User", { pattern = "DivineRemove" })
   assert(calls == 1 and #vim.api.nvim_get_autocmds({ group = group }) == 0)
+end)
+
+T["retains unattempted event targets after a failure"] = case(function(f)
+  local loaded = {}
+  local _, activate = f.triggers.register({
+    load = function(id)
+      loaded[#loaded + 1] = id
+      if id == "a" then error("load failed") end
+      vim.api.nvim_create_user_command("DivineSurvivor", function() end, {})
+    end,
+  }, {
+    a = { triggers = { events = { "User" } } },
+    b = {
+      triggers = {
+        events = { "User" },
+        commands = { "DivineSurvivor" },
+        keys = { { lhs = "<F15>" } },
+        modules = { "divine_survivor" },
+      },
+    },
+  })
+  activate()
+  vim.api.nvim_exec_autocmds("User", { pattern = "DivineFailure" })
+  assert(vim.v.errmsg:find("failed", 1, true), vim.v.errmsg)
+  assert(vim.deep_equal(loaded, { "a" }))
+  assert(vim.fn.exists(":DivineSurvivor") == 2)
+  assert(vim.fn.maparg("<F15>", "n") ~= "")
+  vim.api.nvim_exec_autocmds("User", { pattern = "DivineRecovery" })
+  assert(vim.deep_equal(loaded, { "a", "b" }))
+  assert(vim.fn.maparg("<F15>", "n") == "")
+end)
+
+T["retains unattempted current filetype targets after a failure"] = case(function(f)
+  vim.bo.filetype = "divinefailure"
+  local loaded = {}
+  local _, activate = f.triggers.register({
+    load = function(id)
+      loaded[#loaded + 1] = id
+      if id == "a" then error("load failed") end
+      vim.api.nvim_create_user_command("DivineSurvivor", function() end, {})
+    end,
+  }, {
+    a = { triggers = { filetypes = { "divinefailure" } } },
+    b = {
+      triggers = {
+        filetypes = { "divinefailure" },
+        commands = { "DivineSurvivor" },
+        keys = { { lhs = "<F15>" } },
+      },
+    },
+  })
+  assert(not pcall(activate))
+  assert(vim.deep_equal(loaded, { "a" }))
+  assert(vim.fn.exists(":DivineSurvivor") == 2)
+  assert(vim.fn.maparg("<F15>", "n") ~= "")
+  activate()
+  assert(vim.deep_equal(loaded, { "a" }))
+  vim.cmd.DivineSurvivor()
+  assert(vim.deep_equal(loaded, { "a", "b" }))
+end)
+
+T["reserves batch targets during nested events"] = case(function(f)
+  local loaded, cleanup = {}, nil
+  cleanup = f.triggers.register({
+    load = function(id)
+      loaded[#loaded + 1] = id
+      if id == "a" then
+        vim.api.nvim_exec_autocmds("BufEnter", {})
+        assert(vim.deep_equal(loaded, { "a" }))
+        -- Model runtime cleanup of a dependency or SCC peer.
+        cleanup("b")
+      end
+    end,
+  }, {
+    a = { triggers = { events = { "User" } } },
+    b = { triggers = { events = { "User", "BufEnter" } } },
+    c = { triggers = { events = { "User" } } },
+  })
+  vim.api.nvim_exec_autocmds("User", { pattern = "DivineBatch" })
+  assert(vim.deep_equal(loaded, { "a", "c" }), vim.inspect(loaded))
+end)
+
+T["retains independent targets when a prerequisite fails"] = case(function(f)
+  local loaded = {}
+  for _, name in ipairs({ "a", "b", "c" }) do
+    f.write(name, "plugin/empty.lua", { "-- fixture" })
+  end
+  local controller = require("divine").setup({
+    nodes = {
+      a = { name = "a", triggers = { events = { "User" } } },
+      b = {
+        name = "b",
+        before = function() error("prerequisite failed") end,
+        triggers = { events = { "User" } },
+      },
+      c = {
+        name = "c",
+        triggers = { events = { "User" } },
+        load = function() loaded[#loaded + 1] = "c" end,
+      },
+    },
+    units = {
+      { id = "a", members = { "a" }, dependencies = { "b" } },
+      { id = "b", members = { "b" }, dependencies = {} },
+      { id = "c", members = { "c" }, dependencies = {} },
+    },
+  })
+  vim.api.nvim_exec_autocmds("User", { pattern = "DivineFailure" })
+  assert(vim.v.errmsg:find("failed", 1, true), vim.v.errmsg)
+  assert(controller.states.a == "failed" and controller.states.b == "failed")
+  assert(controller.states.c == "unloaded")
+  vim.api.nvim_exec_autocmds("User", { pattern = "DivineRecovery" })
+  assert(vim.deep_equal(loaded, { "c" }))
 end)
 
 return T
