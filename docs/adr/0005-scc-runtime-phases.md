@@ -47,5 +47,5 @@ Implemented in [lua/divine/init.lua](../../lua/divine/init.lua) and tested by
 [tests/runtime-plan.lua](../../tests/runtime-plan.lua) and the generated bundle
 fixtures. [Runtime details](../runtime.md) distinguish controller idempotence,
 ordinary startup scanning and after/plugin. Passing tests do not accept the
-proposal. Public names, omitted timing, event replay edge cases and arbitrary
+proposal. Public names, event replay edge cases and arbitrary
 plugin compatibility remain open.

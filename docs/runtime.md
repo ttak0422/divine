@@ -43,13 +43,13 @@ before lazy keys are expanded, while require/command triggers already work.
 existing `after` subdirectories are added separately. It does not source an
 entire `after` directory.
 
-Compilation currently requires an explicit `lazy` declaration for every resolved
-node. The resolver still accepts and reports omitted timing, but compiling it
-fails with a specific unresolved-timing diagnostic instead of inventing a default.
-A package shorthand can reference a detailed declaration elsewhere. An explicit
-`lazy = true` with no trigger remains available through the returned controller's
-manual `load(node_id)` operation. This does not establish the eventual policy for
-omitted or triggerless timing.
+The `lazy` option defaults to `true`, including package shorthand and recursive
+detailed definitions. The resolver applies this default after merging repeated
+occurrences, so an explicit `lazy = false` elsewhere still requests startup
+loading without conflicting with shorthand. Conflicting explicit booleans remain
+errors. A lazy node without triggers is not loaded automatically unless another
+startup or triggered node needs it as a prerequisite; it also remains available
+through the returned controller's manual `load(node_id)` operation.
 
 Supported provisional fields are `lazy`, `preConfig`, `config`, `load`,
 `onEvents`, `onCommands`, `onFiletypes`, `onKeys`, and `onModules` in each definition;

@@ -9,7 +9,8 @@ discussion: "https://github.com/ttak0422/divine/pull/1"
 ## Context and Problem Statement
 
 Explicitly non-delayed targets must remain in `opt` and load during startup,
-including declarations nested in dependencies. Omitted timing remains undecided.
+including declarations nested in dependencies. Omitted timing defaults to `true`
+after merging repeated occurrences.
 The prototype needs to identify the prerequisite units for an explicit startup
 demand without treating that demand as inherited timing declarations.
 
@@ -31,12 +32,12 @@ rule; its adoption remains open for review.
 
 An explicit `lazy = false` seeds demand for its SCC and prerequisite closure.
 A dependency can be required at startup even if it declares `lazy = true`.
-No flag is rewritten and every node remains `opt`. `unresolvedTiming` still lists
-nodes with omitted timing, even if prerequisite demand reaches them.
+No flag is rewritten by demand propagation and every node remains `opt`. Nodes
+whose timing defaults to `lazy = true` may also be required at startup.
 
 ### Consequences
 
-- Positive: The graph identifies startup prerequisites without assigning timing
+- Positive: The graph identifies startup prerequisites without overriding timing
   defaults, inheriting a parent's flags or promoting packages to `start`.
 - Negative: A declared deferred dependency can be demanded at startup by another
   node. Consumers must distinguish declared timing from demand; runtime scheduling
@@ -48,6 +49,6 @@ Implemented as graph metadata in [lib/resolve.nix](../../lib/resolve.nix), with
 startup-closure, cycle-startup, opt-placement and omitted-timing fixtures in
 [tests/resolver.nix](../../tests/resolver.nix). Implementation is not acceptance.
 The graph is connected to startup loading through the compiler and bundle in
-[runtime.md](../runtime.md). Triggerless policy, timing defaults and detailed
+[runtime.md](../runtime.md). Triggerless policy and detailed
 runtime handoff remain open; the existing before/load/after
 and `after/plugin` boundaries in [design.md](../design.md) are unchanged.

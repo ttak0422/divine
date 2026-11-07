@@ -49,12 +49,10 @@ api.mkBundle {
       }
       {
         plugin = b;
-        lazy = true;
         dependPlugins = [ a ];
       }
       {
         plugin = deferred;
-        lazy = true;
         onCommands = "DivineFixture";
         onModules = "divine_fixture_deferred";
       }

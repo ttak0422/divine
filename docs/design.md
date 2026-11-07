@@ -75,7 +75,7 @@ not finalized API names.
 
 The fixed requirements concern common definitions, recursive dependencies,
 configuration timing, placement and loading behavior, rather than names. Final
-attribute names, defaults, schema and implementation functions will be decided
+attribute names, schema and implementation functions will be decided
 separately.
 
 ```nix
@@ -123,8 +123,11 @@ recursive structure, not the plugins' actual required dependencies.
 
 An explicitly non-delayed detailed definition is a startup target that remains
 in `opt`, even when nested in dependencies. This does not specify automatic
-inheritance of the parent's load timing. Defaults for package shorthand, omitted
-load timing and definitions without triggers remain undecided.
+inheritance of the parent's load timing. The `lazy` option defaults to `true`
+for package shorthand and detailed definitions with omitted timing, at every
+dependency depth. Apply the default after merging occurrences of the same
+package, preserving explicit timing declarations. Missing triggers do not imply
+startup loading.
 
 The inline after-load configuration in the example calls the plugin's own
 `require("telescope").setup({})` API.
@@ -248,9 +251,8 @@ adopted as requirements or a final API.
 Opt bundle generation, explicit startup loading, five trigger prototypes and SCC
 runtime preparation are now implemented, with limitations recorded in
 [runtime.md](runtime.md). [TODO.md](../TODO.md) separates remaining coverage and
-review questions. Public names, omitted timing and detailed handoff policies are
-still provisional. The syntax example intentionally retains unresolved timing
-and is not a complete executable configuration.
+review questions. Public names and detailed handoff policies are still
+provisional. The syntax example uses the `lazy = true` default for shorthand.
 
 ## Coding rules
 

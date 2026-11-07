@@ -257,8 +257,8 @@ in
         == context;
     expected = true;
   };
-  testNoInventedTiming = {
-    expr = shorthand.unresolvedTiming == [ (id a) ] && shorthand.startupUnits == [ ];
+  testDefaultLazyTiming = {
+    expr = shorthand.nodes.${id a}.settings.lazy == true && shorthand.startupUnits == [ ];
     expected = true;
   };
   testRootMetadata = {
@@ -312,7 +312,7 @@ in
         d
       ]
       && diamond.nodes.${id b}.settings.lazy == true
-      && builtins.elem (id a) diamond.unresolvedTiming;
+      && diamond.nodes.${id a}.settings.lazy == true;
     expected = true;
   };
   testRootAndRecursiveTools = {

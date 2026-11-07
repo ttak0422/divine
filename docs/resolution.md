@@ -1,7 +1,7 @@
 # Dependency resolution prototype — decisions for review
 
 This implements finite dependency graphs, SCC load units, dependency-first DAG
-ordering, and external-package extraction. The compiler now turns an explicitly timed graph into an executable Lua load plan; see [runtime.md](runtime.md).
+ordering, and external-package extraction. The compiler now turns a graph with lazy loading by default into an executable Lua load plan; see [runtime.md](runtime.md).
 Names and the following choices are provisional review decisions, not final API
 or design requirements. Runtime sequencing and trigger handoff have their own proposed implementation boundaries.
 
@@ -54,7 +54,8 @@ not an acceptance of the provisional identity or timing policies below.
   is an alternative if multiple configurations of the same output are needed.
 - **Shorthand:** contributes a package occurrence without supplying any timing
   or configuration defaults. A detailed occurrence of that package can supply
-  those fields elsewhere in the graph.
+  those fields elsewhere in the graph. After merging, omitted `lazy` defaults
+  to `true`; explicit timing remains authoritative.
 - **Settings:** combine fields supplied in separate occurrences. Repeating an
   identical typed value is accepted; different values for the same field error
   with the package and both input locations. String equality includes Nix build
@@ -94,8 +95,9 @@ through the unit's prerequisites. A deferred dependency can therefore be require
 at startup by a non-delayed parent, without changing its declared `lazy` value.
 This dependency-demand rule is a review choice, not timing-field inheritance.
 
-Omitted timing is not turned into a boolean. `unresolvedTiming` reports missing
-timing even when a prerequisite demand pulls that node into a startup unit.
+Omitted timing defaults to `lazy = true` after repeated definitions are merged.
+A prerequisite demand can still pull that node into a startup unit without
+changing its resolved timing.
 Triggerless deferred inputs and runtime trigger handoff are not decided here.
 The graph identifies startup units; the separate compiler and bundle connect them to the runtime.
 
@@ -108,7 +110,7 @@ inferred plugin API or a replacement for Nix's own build dependency closure.
 
 Malformed input and conflicting metadata error before a caller can extract a
 partial tool list and overlook an invalid graph. The output contains `nodes`,
-ordered `units`, `roots`, `startupUnits`, `unresolvedTiming`, `extraPackages` and
+ordered `units`, `roots`, `startupUnits`, `extraPackages` and
 root `metadata`; these names are internal prototype structure.
 
 Pure evaluation tests cover shorthand, detailed/nested input, diamonds, sharing,

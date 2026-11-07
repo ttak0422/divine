@@ -7,8 +7,8 @@ runtime policies remain provisional; it is not yet a stable plugin manager.
 ## Build a configuration
 
 The provisional library accepts the same package or detailed definition at roots
-and in recursive `dependPlugins`. Compilation requires explicit load timing until
-omitted timing is decided. For example, with `pkgs` and the project's `lib` bound:
+and in recursive `dependPlugins`. The `lazy` option defaults to `true` for both
+forms. Set `lazy = false` to request startup loading. For example, with `pkgs` and the project's `lib` bound:
 
 ```nix
 lib.mkBundle {

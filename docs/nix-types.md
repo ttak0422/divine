@@ -4,7 +4,7 @@ The `# Type` sections in the Nix source files are nixdoc documentation, not
 static Nix annotations or a new validation layer. They describe successful inputs and
 results of the current prototype. Invalid inputs can throw, and Nix evaluates
 values lazily: in particular, forcing a compiled `plan` or `lua` runs compiler
-validation. These types do not settle the provisional public API or defaults.
+validation. These types do not settle the provisional public API. The `lazy` default is `true`.
 
 Notation follows the library's existing signatures: `::` describes a type,
 `a -> b` is a function, `[a]` is a list, and `a | b` is a union. In the record
@@ -83,14 +83,13 @@ Graph = {
   units :: [Unit],
   roots :: [String],
   startupUnits :: [String],
-  unresolvedTiming :: [String],
   extraPackages :: [Package],
   metadata :: AttrSet
 }
 ```
 
 `units` are ordered prerequisite-first. `startupUnits` contains unit IDs;
-`unresolvedTiming` contains node IDs. `Graph.extraPackages` includes global and
+`Graph.extraPackages` includes global and
 recursive tools, deduplicated by output path. `mergeSettings` returns a `values`
 attribute set plus an `origins` map from each setting name to its first input
 location; this map differs from each resolved node's list of occurrence origins.
@@ -99,9 +98,9 @@ location; this map differs from each resolved node's list of occurrence origins.
 
 `CompilationConfiguration` is a `Configuration` restricted to the following root
 and definition fields. Package shorthand and recursive detailed definitions still
-work, but every resolved node must obtain explicit `lazy` timing from at least
-one occurrence. Thus `lazy` may be absent on an individual declaration, but not
-from a merged node. The resolver's conflict and finite-input rules still apply.
+work. After merging occurrences, an omitted `lazy` defaults to `true`. Every
+resolved node therefore has boolean `settings.lazy`, while individual declarations
+may omit it. The resolver's conflict and finite-input rules still apply.
 
 ```text
 LuaSource = String | Path

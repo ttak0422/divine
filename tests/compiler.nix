@@ -84,9 +84,58 @@ in
     expr = (api.compile { plugins = [ ]; }).plan.units == [ ];
     expected = true;
   };
-  testRejectMissingTiming = {
-    expr = builtins.deepSeq ((api.compile { plugins = [ a ]; }).lua) true;
-    expectedError.type = "ThrownError";
+  testDefaultLazyShorthand = {
+    expr =
+      let
+        result = api.compile { plugins = [ a ]; };
+      in
+      builtins.deepSeq result.lua (
+        result.graph.nodes.${id a}.settings.lazy && result.plan.startup_units == [ ]
+      );
+    expected = true;
+  };
+  testDefaultLazyDetailedAndNested = {
+    expr =
+      let
+        result = api.compile {
+          plugins = [
+            {
+              plugin = a;
+              onCommands = "Example";
+              dependPlugins = [ { plugin = b; } ];
+            }
+          ];
+        };
+      in
+      builtins.deepSeq result.lua (
+        result.graph.nodes.${id a}.settings.lazy
+        && result.graph.nodes.${id b}.settings.lazy
+        && result.plan.startup_units == [ ]
+        && result.plan.nodes.${id a}.triggers.commands == [ "Example" ]
+      );
+    expected = true;
+  };
+  testExplicitStartupOverridesOmission = {
+    expr =
+      let
+        definitions = [
+          a
+          {
+            plugin = a;
+            lazy = false;
+            dependPlugins = [ b ];
+          }
+        ];
+        result = api.compile { plugins = definitions; };
+        reversed = api.compile { plugins = lib.reverseList definitions; };
+      in
+      builtins.deepSeq [ result.lua reversed.lua ] (
+        !result.graph.nodes.${id a}.settings.lazy
+        && result.graph.nodes.${id b}.settings.lazy
+        && result.plan.startup_units == [ (id b) (id a) ]
+        && reversed.plan == result.plan
+      );
+    expected = true;
   };
   testRejectUnknownSettings = {
     expr = builtins.deepSeq ((compileOne { unexpected = true; }).lua) true;

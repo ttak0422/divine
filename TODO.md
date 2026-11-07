@@ -6,7 +6,7 @@ The design snapshot remains the behavior contract.
 item does not mean its design has been accepted.
 
 - [ ] **API**: choose public names/schema; root and dependency definitions must keep the same recursive expressiveness.
-- [ ] **DEFAULTS**: decide shorthand/omitted load timing, triggerless definitions, and unspecified/single/multiple trigger representation.
+- [ ] **DEFAULTS**: lazy defaults to true for shorthand and omitted timing; remaining triggerless policy and unspecified/single/multiple trigger representation need review.
 - [ ] **IDENTITY**: review/adopt or revise the prototype's output-path identity, field equality/conflict errors, edge/tool unions and retained provenance; see docs/resolution.md.
 - [ ] **CYCLES**: review/adopt or revise finite back-references through package identity; directly cyclic Nix values remain distinct from finite cyclic graphs.
 - [x] **PLAN**: prototype finite graph normalization, SCC extraction and dependency-first load units, including cycles and self-dependencies.

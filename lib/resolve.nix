@@ -198,7 +198,9 @@ let
   nodes = mapAttrs (
     id: declarations:
     let
-      settings = (mergeSettings id declarations).values;
+      # Apply the default after merging so shorthand does not conflict with an
+      # explicit declaration of the same package elsewhere in the graph.
+      settings = { lazy = true; } // (mergeSettings id declarations).values;
       dependencies = concatLists (
         map (
           o:
@@ -326,7 +328,6 @@ deepSeq validation (
     inherit nodes units;
     roots = lib.unique (map (node: key node.definition.plugin) trees);
     startupUnits = map (unit: unit.id) (builtins.filter (unit: unit.startup) units);
-    unresolvedTiming = builtins.filter (id: !(nodes.${id}.settings ? lazy)) ids;
     extraPackages = tools;
     metadata = builtins.removeAttrs request [
       "plugins"

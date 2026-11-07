@@ -31,7 +31,8 @@ recorded in [resolution.md](../resolution.md#input-and-finite-cycles).
 Distinct output paths remain distinct even when display names match. Package
 values and their build contexts are retained; string context is removed only
 from identifiers used as keys. Shorthand contributes an occurrence without
-inventing timing or configuration defaults. Repeated settings are covered by
+assigning occurrence-level timing or configuration defaults. The resolver
+applies the `lazy = true` default after merging repeated occurrences. Repeated settings are covered by
 [ADR 0002](0002-repeated-definitions.md).
 
 ### Consequences

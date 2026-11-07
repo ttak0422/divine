@@ -195,8 +195,6 @@ let
   checked =
     if unknownRoot != [ ] then
       fail "unsupported root fields: ${lib.concatStringsSep ", " unknownRoot}"
-    else if graph.unresolvedTiming != [ ] then
-      fail "load timing remains unresolved; declare lazy explicitly for: ${lib.concatStringsSep ", " graph.unresolvedTiming}"
     else if
       !builtins.isList runtimePaths || !lib.all (p: builtins.isPath p || lib.isDerivation p) runtimePaths
     then
