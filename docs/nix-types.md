@@ -204,3 +204,7 @@ schema rejects unknown root, definition and key fields. The adapter is internal,
 not a new public module API. Raw module properties such as `mkDefault` and
 `mkMerge` are rejected before evaluation, rather than interpreted as input data; public names and existing proposed ADRs remain
 provisional. Generated option documentation remains future work.
+
+Event declarations accept native aliases and case variants. Compilation maps them
+to unique Neovim 0.12.4 callback spellings; runtime plan event strings are canonical.
+Unknown names fail during compilation, including for startup-loaded nodes.

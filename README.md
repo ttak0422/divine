@@ -75,12 +75,12 @@ it does not execute the nix-unit or runtime tests or prove builds on every syste
 `make test-nix` runs the locked flake's named suite through nix-unit, then tests
 the runner's success, mismatch and unexpected-error exit behavior. It replaces
 the previous default path that printed `<LAMBDA>` without executing assertions.
-The suite contains 10 input, 24 module-option, 30 resolver and 22 compiler cases, plus a discovery
+The suite contains 10 input, 24 module-option, 30 resolver and 25 compiler cases, plus a discovery
 regression that checks every expected case name to prevent empty suites from
 passing unnoticed. Evaluation failures use nix-unit's `expectedError` contract.
 
 The existing nixpkgs lock pins nix-unit 2.35.1, built against Nix 2.35.3 evaluator
-components. No additional flake input or host daemon change is needed. This is
+components. The nix-unit check needs no host daemon change. This is
 not a claim of testing a Lix-linked nix-unit variant. See
 [ADR 0006](docs/adr/0006-use-nix-unit.md) for the selected method and boundaries.
 
@@ -101,7 +101,13 @@ so its sandbox does not fetch the flake or access the host daemon. Full
 and 47 native-trigger cases. The development shell and `checks.<system>.runtime`
 use `pkgs.vimPlugins.mini-test` (0.18.0) from the existing nixpkgs lock. It is a
 test-only dependency, never part of generated divine bundles or user runtime
-paths. No additional flake input or lock update is needed.
+paths.
+
+The `events` and `events-stable` checks execute Nix-compiled alias/case plans
+on the development Neovim and stable baseline respectively. The separate
+`nixpkgs-stable` test input pins the `nixos-26.05` default Neovim (0.12.4);
+the baseline check also compares the complete event/alias catalog with its
+upstream source. Consumer library APIs and the development input are unchanged.
 
 Each case starts a fresh headless Neovim process and temporary opt tree through
 mini.test setup/cleanup hooks. The child does not load mini.test. Editor state,

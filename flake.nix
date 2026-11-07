@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-26.05";
     git-hooks = {
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -15,13 +16,14 @@
     # Type
 
     ```
-    outputs :: { self :: AttrSet, nixpkgs :: AttrSet, git-hooks :: AttrSet } -> AttrSet
+    outputs :: { self :: AttrSet, nixpkgs :: AttrSet, nixpkgs-stable :: AttrSet, git-hooks :: AttrSet } -> AttrSet
     ```
   */
   outputs =
     {
       self,
       nixpkgs,
+      nixpkgs-stable,
       git-hooks,
     }:
     let
@@ -72,6 +74,32 @@
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
+          eventPlans = pkgs.writeText "divine-event-plans.lua" (
+            "return " + import ./tests/events.nix { inherit (pkgs) lib; }
+          );
+          /**
+            Run compiled event plans on a runtime, optionally checking its source catalog.
+
+            # Type
+
+            ```
+            eventCheck :: PackageSet -> String -> Derivation
+            ```
+          */
+          eventCheck =
+            packages: source:
+            packages.runCommand "divine-compiled-events-tests"
+              {
+                nativeBuildInputs = [ packages.neovim ];
+              }
+              ''
+                cp -R ${self} source
+                cd source
+                export HOME="$TMPDIR/home"
+                mkdir -p "$HOME"
+                nvim --headless -u NONE --noplugin -n -i NONE -l tests/events.lua ${eventPlans} ${source}
+                touch "$out"
+              '';
         in
         {
           pre-commit-check = hooksFor system;
@@ -98,6 +126,10 @@
               touch "$out"
             '';
           nixpkgs-dependencies = import ./tests/nixpkgs-dependencies.nix { inherit pkgs; };
+          events = eventCheck pkgs "";
+          events-stable =
+            eventCheck nixpkgs-stable.legacyPackages.${system}
+              "${nixpkgs-stable.legacyPackages.${system}.neovim-unwrapped.src}/src/nvim/auevents.lua";
           runtime =
             pkgs.runCommand "divine-runtime-tests"
               {

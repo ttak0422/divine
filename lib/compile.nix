@@ -154,6 +154,33 @@ let
       map normalize entries
     else
       fail "${context} must be a key or a list of keys";
+  eventNames = import ./events.nix;
+  eventLookup = builtins.listToAttrs (
+    map (name: {
+      name = lib.toLower name;
+      value = name;
+    }) eventNames.names
+    ++ lib.mapAttrsToList (name: value: {
+      name = lib.toLower name;
+      inherit value;
+    }) eventNames.aliases
+  );
+  /**
+    Canonicalize native event names and deduplicate in first-declaration order.
+
+    # Type
+
+    ```
+    events :: (String | [String]) -> [String]
+    ```
+  */
+  events =
+    value:
+    lib.unique (
+      map (
+        name: eventLookup.${lib.toLower name} or (fail "unknown onEvents event '${name}' (Neovim 0.12.4)")
+      ) (conditions "onEvents" value)
+    );
   nodes = lib.mapAttrs (
     id: node:
     let
@@ -167,7 +194,7 @@ let
         # An output-path hash prevents equal display names from colliding in opt.
         name = "divine-${builtins.hashString "sha256" id}";
         triggers = {
-          events = conditions "onEvents" (settings.onEvents or [ ]);
+          events = events (settings.onEvents or [ ]);
           commands = conditions "onCommands" (settings.onCommands or [ ]);
           filetypes = conditions "onFiletypes" (settings.onFiletypes or [ ]);
           keys = keys "onKeys" (settings.onKeys or [ ]);

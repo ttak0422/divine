@@ -8,7 +8,7 @@
 ---@field mode? divine.KeyMode Defaults to normal mode.
 
 ---@class divine.Triggers
----@field events? string[] Native Neovim event names.
+---@field events? string[] Canonical native Neovim event names from the compiler.
 ---@field commands? string[] Full user-command names.
 ---@field filetypes? string[] Exact filetype names.
 ---@field keys? divine.KeyTrigger[]
@@ -48,20 +48,6 @@ local function list(value, label)
       fail(label .. " entries must be nonempty strings")
     end
   end
-end
-
----@param event string Validated native event name, possibly an alias.
----@return string
-local function canonical_event(event)
-  -- Query Neovim's own event identity without executing handlers. Delete the
-  -- inert probe even when inspection fails; never leave it among dispatchers.
-  local handle = vim.api.nvim_create_autocmd(event, { command = "" })
-  local ok, result = pcall(
-    function() return vim.api.nvim_get_autocmds({ id = handle })[1].event end
-  )
-  vim.api.nvim_del_autocmd(handle)
-  if not ok then error(result, 0) end
-  return result
 end
 
 ---@class divine.EventReplay
@@ -182,16 +168,14 @@ function M.register(controller, nodes)
       end
     end
   end
-  -- Normalize only after every declaration passes validation, before installing
-  -- persistent stubs. Keep the caller's plan unchanged and deduplicate per node.
-  ---@type table<string, string>, table<divine.NodeId, table<string, boolean>>
-  local canonical, node_events = {}, {}
+  -- The compiler supplies canonical event identities. Keep the plan unchanged.
+  ---@type table<divine.NodeId, table<string, boolean>>
+  local node_events = {}
   for _, id in ipairs(ids) do
     local triggers = nodes[id].triggers or {}
     local events = {}
     for _, event in ipairs(triggers.events or {}) do
-      canonical[event] = canonical[event] or canonical_event(event)
-      events[canonical[event]] = true
+      events[event] = true
     end
     node_events[id] = events
   end

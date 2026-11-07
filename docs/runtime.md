@@ -120,8 +120,19 @@ mean no trigger of that kind. These are prototype representations, not final
 schema choices.
 
 - `onEvents`: native Neovim event names, including aliases and case variants.
-  Names are normalized through Neovim before registration, so aliases share one
-  dispatcher and each pending target is loaded at most once per batch.
+  The Nix compiler normalizes case and aliases, deduplicates each node's events,
+  and rejects unknown names using Neovim 0.12.4's event catalog (the nixpkgs
+  `nixos-26.05` default). Plans contain callback spellings such as `BufReadPost`,
+  not the shorter `BufRead` alias. Aliases share one dispatcher and each pending
+  target is loaded at most once per batch. Runtime registration creates no
+  temporary normalization autocmds. The runtime still rejects events unavailable
+  in the running Neovim before installing any triggers. Other versions may work
+  when they support the plan's canonical events; newer-only names require an
+  explicit catalog update. Handwritten runtime plans must use canonical names.
+  `lib/events.nix` records the upstream source; `checks.<system>.events` verifies
+  the catalog's identities and compiled alias/case plans against Neovim.
+  `events-stable` also checks the full catalog against the stable source.
+  The stable test input is separate from the existing development nixpkgs input.
   Matching pending units are loaded together,
   then the event is dispatched through Neovim in each eligible named augroup.
   Groups with any handler for that event before loading are excluded, even when

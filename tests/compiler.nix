@@ -50,6 +50,45 @@ let
     };
 in
 {
+  testNormalizeEventAliases = {
+    expr =
+      (compileOne {
+        onEvents = [
+          "bufread"
+          "BUFREADPOST"
+          "BufCreate"
+          "bufadd"
+          "BufWrite"
+          "BUFWRITEPRE"
+          "FileEncoding"
+          "encodingchanged"
+          "uSeR"
+        ];
+      }).plan.nodes.${id a}.triggers.events;
+    expected = [
+      "BufReadPost"
+      "BufAdd"
+      "BufWritePre"
+      "EncodingChanged"
+      "User"
+    ];
+  };
+  testNormalizeEveryEventCase = {
+    expr =
+      let
+        names = (import ../lib/events.nix).names;
+      in
+      (compileOne { onEvents = map lib.toUpper names ++ map lib.toLower names; })
+      .plan.nodes.${id a}.triggers.events == names;
+    expected = true;
+  };
+  testRejectUnknownEvent = {
+    expr = (compileOne { onEvents = "NotAnEvent"; }).lua;
+    expectedError = {
+      type = "ThrownError";
+      msg = "divine compiler: unknown onEvents event 'NotAnEvent'.*";
+    };
+  };
   testGeneratedPlanInvariants = {
     expr =
       let

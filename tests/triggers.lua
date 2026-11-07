@@ -573,7 +573,7 @@ T["supplements buffer read events in order with per-event exclusions"] = case(fu
         { group = group, callback = function() seen[#seen + 1] = { "shared-post" } end }
       )
     end,
-  }, { event = { triggers = { events = { "bUfReAd" } } } })
+  }, { event = { triggers = { events = { "BufReadPost" } } } })
   local buffer = vim.api.nvim_get_current_buf()
   vim.api.nvim_exec_autocmds("BufReadPost", { buffer = buffer, data = { original = true } })
   assert(existing == 0)
@@ -755,7 +755,7 @@ T["retains independent targets when a prerequisite fails"] = case(function(f)
   assert(vim.deep_equal(loaded, { "c" }))
 end)
 
-T["shares canonical dispatchers for native aliases and case variants"] = case(function(f)
+T["shares canonical dispatchers when aliases fire"] = case(function(f)
   for _, pair in ipairs({
     { "BufRead", "BufReadPost" },
     { "BufWrite", "BufWritePre" },
@@ -767,9 +767,9 @@ T["shares canonical dispatchers for native aliases and case variants"] = case(fu
     local before = #vim.api.nvim_get_autocmds({ event = canonical })
     local loaded, replayed = {}, {}
     local nodes = {
-      a = { triggers = { events = { alias, alias:lower(), canonical, canonical:upper() } } },
+      a = { triggers = { events = { canonical } } },
       b = { triggers = { events = { canonical } } },
-      c = { triggers = { events = { alias:lower() } } },
+      c = { triggers = { events = { canonical } } },
     }
     local original = vim.deepcopy(nodes)
     f.triggers.register({
@@ -795,12 +795,12 @@ T["shares canonical dispatchers for native aliases and case variants"] = case(fu
   end
 end)
 
-T["cleans shared alias dispatchers only after their last target"] = case(function(f)
+T["cleans shared event dispatchers only after their last target"] = case(function(f)
   local loaded = {}
   local before = #vim.api.nvim_get_autocmds({ event = "BufReadPost" })
   local cleanup = f.triggers.register({ load = function(id) loaded[#loaded + 1] = id end }, {
-    a = { triggers = { events = { "BufRead", "BufReadPost", "bufread" } } },
-    b = { triggers = { events = { "BUFREADPOST" } } },
+    a = { triggers = { events = { "BufReadPost" } } },
+    b = { triggers = { events = { "BufReadPost" } } },
   })
   cleanup("a")
   cleanup("a")
@@ -810,7 +810,7 @@ T["cleans shared alias dispatchers only after their last target"] = case(functio
   assert(#vim.api.nvim_get_autocmds({ event = "BufReadPost" }) == before)
 end)
 
-T["stops mixed alias batches at the first failure"] = case(function(f)
+T["stops canonical event batches at the first failure"] = case(function(f)
   local loaded = {}
   local before = #vim.api.nvim_get_autocmds({ event = "BufReadPost" })
   f.triggers.register({
@@ -819,9 +819,9 @@ T["stops mixed alias batches at the first failure"] = case(function(f)
       if id == "a" then error("alias load failed") end
     end,
   }, {
-    a = { triggers = { events = { "BufRead", "bufreadpost" } } },
+    a = { triggers = { events = { "BufReadPost" } } },
     b = { triggers = { events = { "BufReadPost" } } },
-    c = { triggers = { events = { "bufread" } } },
+    c = { triggers = { events = { "BufReadPost" } } },
   })
   vim.api.nvim_exec_autocmds("BufRead", {})
   assert(vim.v.errmsg:find("alias load failed", 1, true), vim.v.errmsg)
@@ -832,11 +832,11 @@ T["stops mixed alias batches at the first failure"] = case(function(f)
   assert(#vim.api.nvim_get_autocmds({ event = "BufReadPost" }) == before)
 end)
 
-T["shares FileType case variants without widening filetype filters"] = case(function(f)
+T["shares FileType dispatchers without widening filetype filters"] = case(function(f)
   local loaded = {}
   local before = #vim.api.nvim_get_autocmds({ event = "FileType" })
   f.triggers.register({ load = function(id) loaded[#loaded + 1] = id end }, {
-    a = { triggers = { events = { "filetype", "FileType" }, filetypes = { "divineyes" } } },
+    a = { triggers = { events = { "FileType" }, filetypes = { "divineyes" } } },
     b = { triggers = { filetypes = { "divineyes" } } },
     c = { triggers = { filetypes = { "divineno" } } },
   })
@@ -849,38 +849,35 @@ T["shares FileType case variants without widening filetype filters"] = case(func
   assert(#vim.api.nvim_get_autocmds({ event = "FileType" }) == before)
 end)
 
-T["validates all declarations before probing event names"] = case(function(f)
+T["validates all declarations before registering events"] = case(function(f)
   local create, calls = vim.api.nvim_create_autocmd, 0
   vim.api.nvim_create_autocmd = function(...)
     calls = calls + 1
     return create(...)
   end
   local ok = pcall(f.triggers.register, { load = function() end }, {
-    a = { triggers = { events = { "bufread" }, commands = { "DivineAliasProbe" } } },
+    a = { triggers = { events = { "BufReadPost" }, commands = { "DivineValidation" } } },
     z = { triggers = { events = { "NotAnEvent" } } },
   })
   vim.api.nvim_create_autocmd = create
   assert(not ok and calls == 0)
-  assert(vim.fn.exists(":DivineAliasProbe") == 0)
+  assert(vim.fn.exists(":DivineValidation") == 0)
 end)
 
-T["removes normalization probes when inspection fails"] = case(function(f)
-  local get, calls = vim.api.nvim_get_autocmds, 0
-  local before = get({})
-  vim.api.nvim_get_autocmds = function(options)
-    if options.id then
-      calls = calls + 1
-      if calls == 2 then error("probe inspection failed") end
-    end
-    return get(options)
+T["registers canonical events without temporary autocmd probes"] = case(function(f)
+  local create, get, calls = vim.api.nvim_create_autocmd, vim.api.nvim_get_autocmds, 0
+  vim.api.nvim_create_autocmd = function(...)
+    calls = calls + 1
+    return create(...)
   end
+  vim.api.nvim_get_autocmds = function() error("unexpected event inspection") end
   local ok, err = pcall(f.triggers.register, { load = function() end }, {
-    a = { triggers = { events = { "bufread", "user" }, commands = { "DivineAliasProbe" } } },
+    a = { triggers = { events = { "BufReadPost", "User" } } },
+    b = { triggers = { events = { "BufReadPost" } } },
   })
-  vim.api.nvim_get_autocmds = get
-  assert(not ok and tostring(err):find("probe inspection failed", 1, true))
-  assert(vim.deep_equal(get({}), before))
-  assert(vim.fn.exists(":DivineAliasProbe") == 0)
+  vim.api.nvim_create_autocmd, vim.api.nvim_get_autocmds = create, get
+  assert(ok, err)
+  assert(calls == 2)
 end)
 
 return T
