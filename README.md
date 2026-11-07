@@ -8,7 +8,8 @@ runtime policies remain provisional; it is not yet a stable plugin manager.
 
 The provisional library accepts the same package or detailed definition at roots
 and in recursive `dependPlugins`. The `lazy` option defaults to `false` for both
-forms. Prefer startup loading for predictable behavior in long-lived sessions. Set
+forms. Omit `lazy` for startup loading; there is no need to write `lazy = false`.
+Prefer startup loading for predictable behavior in long-lived sessions. Set
 `lazy = true` only where deferred loading is useful. For example, with `pkgs` and the project's `lib` bound:
 
 ```nix

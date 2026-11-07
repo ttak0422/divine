@@ -93,7 +93,7 @@ separately.
         # Dependencies accept the same detailed definitions and further nesting.
         {
           plugin = pkgs.vimPlugins.vim-startuptime;
-          lazy = false; # Load this at startup while keeping it in opt.
+          # Omit lazy to load at startup while keeping this in opt.
           preConfig = # lua
             ''
               vim.g.startuptime_tries = 10
@@ -159,7 +159,7 @@ representation of cycles and a finite normalization method remain undecided.
 Managed targets and their dependencies normally belong in `opt`.
 **Non-delayed targets remain in `opt` and are explicitly loaded at startup.**
 A non-delayed declaration does not mean switching placement to `start`.
-The example's `lazy = false` is provisional syntax for this non-delayed behavior.
+The example omits `lazy` for this default, non-delayed behavior.
 Deferred targets load on their specified triggers.
 
 ```text
@@ -254,7 +254,8 @@ Opt bundle generation, explicit startup loading, five trigger prototypes and SCC
 runtime preparation are now implemented, with limitations recorded in
 [runtime.md](runtime.md). [TODO.md](../TODO.md) separates remaining coverage and
 review questions. Public names and detailed handoff policies are still
-provisional. The syntax example uses the `lazy = false` default for shorthand.
+provisional. The syntax example omits `lazy` for startup loading in both shorthand
+and detailed definitions.
 
 ## Coding rules
 

@@ -26,7 +26,7 @@
         # Dependencies accept the same detailed definitions and further nesting.
         {
           plugin = pkgs.vimPlugins.vim-startuptime;
-          lazy = false; # Load this at startup while keeping it in opt.
+          # Omit lazy to load at startup while keeping this in opt.
           preConfig = # lua
             ''
               vim.g.startuptime_tries = 10

@@ -18,6 +18,11 @@ Write configuration examples as inline Nix strings annotated with `# lua`, rathe
 than `builtins.readFile`. This is a documentation convention; users may still
 split their configuration into external Lua files.
 
+Omit `lazy = false` in ordinary configuration examples: startup loading is the
+default. Use `lazy = true` for intentional deferral. Keep explicit `false` where
+it explains the API contract or matters to a repeated-definition or conflict
+test; omission is unspecified until declarations are merged.
+
 ## Coding and validation
 
 Run `make test` for changes to input inspection or runtime sequencing. Use the

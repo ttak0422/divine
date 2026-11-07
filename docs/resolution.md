@@ -25,7 +25,7 @@ With `a` and `b` bound to package derivations, this is a finite input for a cycl
 ```nix
 {
   plugins = [
-    { plugin = a; lazy = false; dependPlugins = [ b ]; }
+    { plugin = a; dependPlugins = [ b ]; }
     { plugin = b; lazy = true; dependPlugins = [ a ]; }
   ];
 }
