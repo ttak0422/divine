@@ -55,6 +55,7 @@ return {
     "preserves native callback removal",
     "preserves native once semantics for multiple patterns",
     "preserves nested handlers and prevents recursive trigger loads",
+    "preserves operator context for expression mappings and leader keys",
     "preserves raw command arguments and parsed argument parity",
     "rejects empty key sequences",
     "rejects expanded leader conflicts before installing any key",

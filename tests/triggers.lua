@@ -361,6 +361,48 @@ T["hands off operator-pending keys without reconstructing operators"] = case(fun
   end
 end)
 
+T["preserves operator context for expression mappings and leader keys"] = case(function(f)
+  vim.g.mapleader = " "
+  f.write("operatorexpr", "plugin/key.lua", {
+    'vim.keymap.set("o", "<leader>op", function()',
+    "  _G.divine_operator_context = { vim.v.count, vim.v.count1, vim.v.register, vim.v.operator, vim.fn.mode(1) }",
+    '  return "iw"',
+    "end, { expr = true })",
+  })
+  _G.divine_operator = function(kind) _G.divine_operator_kind = kind end
+  vim.go.operatorfunc = "v:lua.divine_operator"
+  for _, keys in ipairs({ '"a2d3 op', "g~ op", "dV op", "c opX<Esc>", "g@ op" }) do
+    local function run()
+      _G.divine_operator_context, _G.divine_operator_kind = nil, nil
+      vim.api.nvim_buf_set_lines(
+        0,
+        0,
+        -1,
+        false,
+        { "one two three four five six seven", "next line" }
+      )
+      vim.api.nvim_win_set_cursor(0, { 1, 0 })
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, false, true), "xt", false)
+      return {
+        context = _G.divine_operator_context,
+        kind = _G.divine_operator_kind,
+        lines = vim.api.nvim_buf_get_lines(0, 0, -1, false),
+        cursor = vim.api.nvim_win_get_cursor(0),
+        mode = vim.fn.mode(1),
+      }
+    end
+    vim.cmd.packadd("operatorexpr")
+    local native = run()
+    assert(native.context ~= nil)
+    vim.keymap.del("o", "<leader>op")
+    local count = f.setup("operatorexpr", { keys = { { lhs = "<leader>op", mode = "o" } } })
+    assert(vim.deep_equal(run(), native), "first expression context differs: " .. keys)
+    assert(vim.deep_equal(run(), native), "loaded expression context differs: " .. keys)
+    assert(count() == 1)
+    vim.keymap.del("o", "<leader>op")
+  end
+end)
+
 T["cleans failed operator triggers when configuration violates textlock"] = case(function(f)
   f.write("lockedkey", "plugin/key.lua", { "vim.g.divine_locked_plugin = true" })
   local calls = 0
