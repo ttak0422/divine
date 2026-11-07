@@ -66,7 +66,7 @@ requirements or the status of unresolved decisions.
 
 These first records capture existing prototype choices for review. Their dates
 record this documentation pass, not historical design approval. They do not
-settle public names, trigger defaults or within-unit execution. The `lazy = true`
+settle public names, trigger defaults or within-unit execution. The `lazy = false`
 default is specified separately in the design requirements.
 
 - [0001: Use output-path identity for finite back-references](0001-output-path-identity.md) (`proposed`).

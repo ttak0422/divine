@@ -7,8 +7,9 @@ runtime policies remain provisional; it is not yet a stable plugin manager.
 ## Build a configuration
 
 The provisional library accepts the same package or detailed definition at roots
-and in recursive `dependPlugins`. The `lazy` option defaults to `true` for both
-forms. Set `lazy = false` to request startup loading. For example, with `pkgs` and the project's `lib` bound:
+and in recursive `dependPlugins`. The `lazy` option defaults to `false` for both
+forms. Prefer startup loading for predictable behavior in long-lived sessions. Set
+`lazy = true` only where deferred loading is useful. For example, with `pkgs` and the project's `lib` bound:
 
 ```nix
 lib.mkBundle {
@@ -17,11 +18,9 @@ lib.mkBundle {
     plugins = [
       {
         plugin = pkgs.vimPlugins.telescope-nvim;
-        lazy = true;
         dependPlugins = [
-          { plugin = pkgs.vimPlugins.plenary-nvim; lazy = true; }
+          pkgs.vimPlugins.plenary-nvim
         ];
-        onCommands = "Telescope";
         config = # lua
           ''
             require("telescope").setup({})
@@ -38,8 +37,12 @@ lib.mkBundle {
 }
 ```
 
-Run Neovim with `nvim -u /path/to/bundle/init.lua`. Explicit `lazy = false` entries
-stay in opt and load during init. The bundle places only explicitly declared
+Run Neovim with `nvim -u /path/to/bundle/init.lua`. Entries with omitted timing or `lazy = false`
+stay in opt and load during init. For selective deferral, set `lazy = true` and a
+trigger such as `onCommands = "Telescope"`; triggers alone do not defer loading.
+Dependencies also default to startup loading, independently of their parent.
+Keep everyday editing features eager; occasional command-driven tools are good
+candidates for explicit deferral. The bundle places only explicitly declared
 configuration dependencies, ignoring nixpkgs plugin `dependencies` for loading
 without rewriting the original derivations or promoting plugins to start.
 Required runtime plugins must be declared explicitly, as above. The test suite
@@ -71,7 +74,7 @@ it does not execute the nix-unit or runtime tests or prove builds on every syste
 `make test-nix` runs the locked flake's named suite through nix-unit, then tests
 the runner's success, mismatch and unexpected-error exit behavior. It replaces
 the previous default path that printed `<LAMBDA>` without executing assertions.
-The suite contains 10 input, 23 module-option, 30 resolver and 16 compiler cases, plus a discovery
+The suite contains 10 input, 23 module-option, 30 resolver and 17 compiler cases, plus a discovery
 regression that checks every expected case name to prevent empty suites from
 passing unnoticed. Evaluation failures use nix-unit's `expectedError` contract.
 

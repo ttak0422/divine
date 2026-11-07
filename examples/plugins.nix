@@ -2,8 +2,8 @@
 /**
   Build illustrative declarations from a Nixpkgs package set.
 
-  Timing remains unresolved for package shorthand, so the result is a resolver
-  Configuration rather than a complete CompilationConfiguration.
+  Package shorthand loads at startup. This example selectively defers one
+  plugin while keeping its dependencies available from startup.
   Named types are documented in ../docs/nix-types.md.
 
   # Type
@@ -15,12 +15,12 @@
 { pkgs, ... }:
 {
   plugins = [
-    # A package alone is valid at both roots and dependencies.
+    # A package alone loads at startup at both roots and dependencies.
     pkgs.vimPlugins.vim-repeat
 
     {
       plugin = pkgs.vimPlugins.telescope-nvim;
-      lazy = true;
+      lazy = true; # Explicit opt-in to deferred loading.
       dependPlugins = [
         pkgs.vimPlugins.plenary-nvim
         # Dependencies accept the same detailed definitions and further nesting.

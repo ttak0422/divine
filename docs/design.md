@@ -123,11 +123,13 @@ recursive structure, not the plugins' actual required dependencies.
 
 An explicitly non-delayed detailed definition is a startup target that remains
 in `opt`, even when nested in dependencies. This does not specify automatic
-inheritance of the parent's load timing. The `lazy` option defaults to `true`
+inheritance of the parent's load timing. The `lazy` option defaults to `false`
 for package shorthand and detailed definitions with omitted timing, at every
 dependency depth. Apply the default after merging occurrences of the same
-package, preserving explicit timing declarations. Explicit `lazy = null` also means unspecified. Missing triggers do not imply
-startup loading.
+package, preserving explicit timing declarations. Explicit `lazy = null` also means unspecified. Triggers do not change this default: deferred loading requires explicit
+`lazy = true`. Prefer predictable startup loading in long-lived sessions and
+use deferred loading selectively, mainly for occasional tools rather than
+everyday editing features.
 
 The inline after-load configuration in the example calls the plugin's own
 `require("telescope").setup({})` API.
@@ -252,7 +254,7 @@ Opt bundle generation, explicit startup loading, five trigger prototypes and SCC
 runtime preparation are now implemented, with limitations recorded in
 [runtime.md](runtime.md). [TODO.md](../TODO.md) separates remaining coverage and
 review questions. Public names and detailed handoff policies are still
-provisional. The syntax example uses the `lazy = true` default for shorthand.
+provisional. The syntax example uses the `lazy = false` default for shorthand.
 
 ## Coding rules
 

@@ -43,13 +43,20 @@ before lazy keys are expanded, while require/command triggers already work.
 existing `after` subdirectories are added separately. It does not source an
 entire `after` directory.
 
-The `lazy` option defaults to `true`, including package shorthand and recursive
+The `lazy` option defaults to `false`, including package shorthand and recursive
 detailed definitions. The resolver applies this default after merging repeated
-occurrences, so an explicit `lazy = false` elsewhere still requests startup
+occurrences, so an explicit `lazy = true` elsewhere still requests deferred
 loading without conflicting with shorthand. Conflicting explicit booleans remain
-errors. A lazy node without triggers is not loaded automatically unless another
+errors. Trigger fields do not imply deferred loading; set `lazy = true` explicitly.
+A dependency with omitted timing loads at startup even when its parent is deferred.
+A lazy node without triggers is not loaded automatically unless another
 startup or triggered node needs it as a prerequisite; it also remains available
 through the returned controller's manual `load(node_id)` operation.
+
+When updating a configuration that relied on the previous deferred default,
+add `lazy = true` to each plugin that should remain deferred, including any
+otherwise eager dependencies. Retain existing triggers; do not add flags to
+everyday editing plugins that should now load at startup.
 
 Supported provisional fields are `lazy`, `preConfig`, `config`, `load`,
 `onEvents`, `onCommands`, `onFiletypes`, `onKeys`, and `onModules` in each definition;

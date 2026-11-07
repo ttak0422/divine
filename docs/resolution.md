@@ -1,7 +1,7 @@
 # Dependency resolution prototype — decisions for review
 
 This implements finite dependency graphs, SCC load units, dependency-first DAG
-ordering, and external-package extraction. The compiler now turns a graph with lazy loading by default into an executable Lua load plan; see [runtime.md](runtime.md).
+ordering, and external-package extraction. The compiler now turns a graph with startup loading by default into an executable Lua load plan; see [runtime.md](runtime.md).
 Names and the following choices are provisional review decisions, not final API
 or design requirements. Runtime sequencing and trigger handoff have their own proposed implementation boundaries.
 
@@ -55,7 +55,7 @@ not an acceptance of the provisional identity or timing policies below.
 - **Shorthand:** contributes a package occurrence without supplying any timing
   or configuration defaults. A detailed occurrence of that package can supply
   those fields elsewhere in the graph. After merging, omitted `lazy` defaults
-  to `true`; explicit timing remains authoritative. Explicit `lazy = null` also
+  to `false`; explicit timing remains authoritative. Explicit `lazy = null` also
   means unspecified and is removed before comparing timing declarations. Null
   in other settings is not treated as omission.
 - **Settings:** combine fields supplied in separate occurrences. Repeating an
@@ -92,14 +92,15 @@ and replace it with a more compact SCC algorithm if necessary.
 ## Startup demand and opt placement
 
 Every node is marked `placement = "opt"`, including explicitly non-delayed ones.
-An explicit `lazy = false` makes its SCC a startup demand. That demand propagates
+A resolved `lazy = false` (including the default) makes its SCC a startup demand. That demand propagates
 through the unit's prerequisites. A deferred dependency can therefore be required
 at startup by a non-delayed parent, without changing its declared `lazy` value.
 This dependency-demand rule is a review choice, not timing-field inheritance.
 
-Omitted timing defaults to `lazy = true` after repeated definitions are merged.
-A prerequisite demand can still pull that node into a startup unit without
-changing its resolved timing.
+Omitted timing defaults to `lazy = false` after repeated definitions are merged.
+An explicit `lazy = true` node can still be pulled into a startup unit by
+a prerequisite demand without changing its resolved timing. Triggers alone do
+not imply deferred loading.
 Triggerless deferred inputs and runtime trigger handoff are not decided here.
 The graph identifies startup units; the separate compiler and bundle connect them to the runtime.
 

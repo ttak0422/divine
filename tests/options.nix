@@ -100,7 +100,7 @@ in
         lazy = null;
       }
     ];
-    expected = true;
+    expected = false;
   };
   testNullAndExplicitBothOrders = {
     expr =
@@ -171,7 +171,10 @@ in
           }
         ];
       }).plan.startup_units;
-    expected = [ a.outPath ];
+    expected = [
+      a.outPath
+      b.outPath
+    ];
   };
   testNoSyntheticTriggerConflict = {
     expr =

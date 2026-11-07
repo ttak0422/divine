@@ -257,8 +257,8 @@ in
         == context;
     expected = true;
   };
-  testDefaultLazyTiming = {
-    expr = shorthand.nodes.${id a}.settings.lazy == true && shorthand.startupUnits == [ ];
+  testDefaultStartupTiming = {
+    expr = shorthand.nodes.${id a}.settings.lazy == false && shorthand.startupUnits == [ (id a) ];
     expected = true;
   };
   testRootMetadata = {
@@ -312,7 +312,7 @@ in
         d
       ]
       && diamond.nodes.${id b}.settings.lazy == true
-      && diamond.nodes.${id a}.settings.lazy == true;
+      && diamond.nodes.${id a}.settings.lazy == false;
     expected = true;
   };
   testRootAndRecursiveTools = {
@@ -370,7 +370,7 @@ in
         ]
       &&
         repeated.nodes.${id a}.settings == {
-          lazy = true;
+          lazy = false;
           config = "same()";
           preConfig = "before()";
         }

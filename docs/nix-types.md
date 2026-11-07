@@ -4,7 +4,7 @@ The `# Type` sections in the Nix source files are nixdoc documentation, not
 static Nix annotations or a new validation layer. They describe successful inputs and
 results of the current prototype. Invalid inputs can throw, and Nix evaluates
 values lazily: in particular, forcing a compiled `plan` or `lua` runs compiler
-validation. These types do not settle the provisional public API. The `lazy` default is `true`.
+validation. These types do not settle the provisional public API. The `lazy` default is `false`.
 
 Notation follows the library's existing signatures: `::` describes a type,
 `a -> b` is a function, `[a]` is a list, and `a | b` is a union. In the record
@@ -98,7 +98,7 @@ location; this map differs from each resolved node's list of occurrence origins.
 
 `CompilationConfiguration` is a `Configuration` restricted to the following root
 and definition fields. Package shorthand and recursive detailed definitions still
-work. After merging occurrences, an omitted `lazy` defaults to `true`. Every
+work. After merging occurrences, an omitted `lazy` defaults to `false`. Every
 resolved node therefore has boolean `settings.lazy`, while individual declarations
 may omit it or use `null` to leave timing unspecified. The resolver's conflict and finite-input rules still apply.
 

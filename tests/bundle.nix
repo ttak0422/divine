@@ -33,7 +33,6 @@ api.mkBundle {
     plugins = [
       {
         plugin = a;
-        lazy = false;
         dependPlugins = [ b ];
         preConfig = # lua
           ''
@@ -53,6 +52,7 @@ api.mkBundle {
       }
       {
         plugin = deferred;
+        lazy = true;
         onCommands = "DivineFixture";
         onModules = "divine_fixture_deferred";
       }

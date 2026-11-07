@@ -8,15 +8,15 @@ discussion: "https://github.com/ttak0422/divine/pull/1"
 
 ## Context and Problem Statement
 
-Explicitly non-delayed targets must remain in `opt` and load during startup,
-including declarations nested in dependencies. Omitted timing defaults to `true`
+Non-delayed targets must remain in `opt` and load during startup,
+including declarations nested in dependencies. Omitted timing defaults to `false`
 after merging repeated occurrences.
-The prototype needs to identify the prerequisite units for an explicit startup
+The prototype needs to identify the prerequisite units for a startup
 demand without treating that demand as inherited timing declarations.
 
 ## Considered Options
 
-- Seed startup demand from explicitly non-delayed nodes and propagate it through
+- Seed startup demand from non-delayed nodes and propagate it through
   their SCC units' prerequisites, retaining all declared timing (prototype).
 
 [resolution.md](../resolution.md#startup-demand-and-opt-placement) records this
@@ -26,14 +26,14 @@ comparison is recorded here.
 ## Decision Outcome
 
 Proposed option: "Propagate startup demand through prerequisite units", so the
-output identifies the prerequisites of an explicit startup target while retaining
+output identifies the prerequisites of a startup target while retaining
 the original timing declarations. This describes the prototype's dependency-demand
 rule; its adoption remains open for review.
 
-An explicit `lazy = false` seeds demand for its SCC and prerequisite closure.
+A resolved `lazy = false` (including the default) seeds demand for its SCC and prerequisite closure.
 A dependency can be required at startup even if it declares `lazy = true`.
 No flag is rewritten by demand propagation and every node remains `opt`. Nodes
-whose timing defaults to `lazy = true` may also be required at startup.
+with omitted timing now seed startup demand themselves.
 
 ### Consequences
 

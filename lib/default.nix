@@ -70,7 +70,7 @@ in
   inherit resolve;
 
   /**
-    Compile declarations with lazy loading by default into a provisional Lua runtime plan.
+    Compile declarations with startup loading by default into a provisional Lua runtime plan.
 
     # Type
 

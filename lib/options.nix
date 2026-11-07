@@ -47,7 +47,7 @@ let
     lazy = mkOption {
       type = types.nullOr types.bool;
       default = null;
-      description = "Load lazily. Null means unspecified; true is applied after all occurrences are merged.";
+      description = "Load lazily. Null means unspecified; false is applied after all occurrences are merged.";
     };
     dependPlugins = mkOption {
       type = entries;

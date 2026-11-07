@@ -57,7 +57,7 @@ suites
         "testContextualPackage"
         "testCycleStartup"
         "testCycleTools"
-        "testDefaultLazyTiming"
+        "testDefaultStartupTiming"
         "testDependencyOrder"
         "testDetailedSettings"
         "testDeterministicOrder"
@@ -84,11 +84,12 @@ suites
         "testTimingConflict"
       ];
       compiler = [
-        "testDefaultLazyDetailedAndNested"
-        "testDefaultLazyShorthand"
+        "testDefaultStartupDetailedAndNested"
+        "testDefaultStartupShorthand"
         "testDependencyStartupUnit"
         "testEmitLuaCallbacks"
         "testEmptyPlan"
+        "testExplicitDeferredOverridesOmission"
         "testExplicitStartupOverridesOmission"
         "testNormalizeCommandTrigger"
         "testNormalizeKeyTriggers"
