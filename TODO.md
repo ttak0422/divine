@@ -2,6 +2,8 @@
 
 These items are not implicitly decided by the prototype's names or behavior.
 The design snapshot remains the behavior contract.
+[ADRs](docs/adr/README.md) track decision status separately: a checked implementation
+item does not mean its design has been accepted.
 
 - [ ] **API**: choose public names/schema; root and dependency definitions must keep the same recursive expressiveness.
 - [ ] **DEFAULTS**: decide shorthand/omitted load timing, triggerless definitions, and unspecified/single/multiple trigger representation.

@@ -5,6 +5,13 @@ ordering, and external-package extraction. It is not an executable Lua load plan
 Names and the following choices are provisional review decisions, not final API
 or design requirements. The runtime and lazy-trigger implementations are unchanged.
 
+Review status and reasoning are also indexed in the [ADRs](adr/README.md):
+[identity and finite references](adr/0001-output-path-identity.md),
+[repeated definitions](adr/0002-repeated-definitions.md),
+[SCC extraction](adr/0003-prototype-scc-extraction.md), and
+[startup demand](adr/0004-startup-demand.md). All four remain `proposed`; the
+implementation described below does not establish design acceptance.
+
 ## Input and finite cycles
 
 `lib.resolve { plugins = [ ... ]; extraPackages = [ ... ]; }` accepts the same

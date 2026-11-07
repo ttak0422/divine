@@ -19,6 +19,8 @@ The locked development tooling targets Apple Silicon macOS and aarch64/x86_64 Li
 
 The [design snapshot](docs/design.md) records the current behavior requirements.
 [TODO.md](TODO.md) separates undecided behavior from missing implementation.
+[Architecture decision records](docs/adr/README.md) capture review decisions in
+English using a lightweight MADR 4.0 format; prototype choices stay `proposed`.
 All names in `lib/`, `lua/` and `examples/` are provisional internal scaffolding.
 There is no stable public API or Neovim package output.
 

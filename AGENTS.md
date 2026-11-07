@@ -10,12 +10,10 @@ proposals and unresolved questions explicit; do not turn them into accepted
 decisions as a side effect of implementation. Report the checks actually run and
 any remaining limitations.
 
-Read docs/design.md and TODO.md before changing behavior. All current API names
-are provisional; do not settle unknown defaults, identity/merge/conflict rules or
-cycle representation merely to make a check pass. Root and dependency definitions
-must retain the same recursive expressiveness.
+Read the relevant project documentation before making changes:
 
-Run make test for changes to input inspection or runtime sequencing. Use the
-git-hooks.nix/prek checks for Nix/Lua style. Nix functions use nixdoc comments.
-Keep first-trigger and real-plugin tests distinct from isolated fixture checks.
-Do not introduce an external loader or automatically source after/plugin.
+- [Design requirements](docs/design.md): behavior and scope.
+- [Architecture decisions](docs/adr/README.md): decision records, review status and template.
+- [Resolution](docs/resolution.md): dependency-graph implementation.
+- [Implementation tasks](TODO.md): remaining work and open questions.
+- [Implementation guidelines](docs/contributing.md): coding, examples and validation rules.

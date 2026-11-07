@@ -1,48 +1,74 @@
 # Design requirements
 
-## 基本方針
+## Core approach
 
-- Pure Nix で構成を宣言・解決し、軽量な Lua runtime で動的に読み込む。
-- 基本方針 Nix で Neovim 構成を定義、ビルド時に必要なファイル配置、軽量 runtime による動的ロード
-- 管理対象プラグインとその依存は起動時ロード対象も原則 opt に配置する。after関連の読み込みはユーザ責任とする。
-- 起動時対象と遅延対象を別入力に分けず、共通の plugin 定義で扱う。非遅延指定の対象も opt のまま起動時に明示ロードし、start 配置へ切り替えない。読込を担う runtime は init 中から利用可能にする。
-- トップレベルと依存の両方で package 単体または同じ詳細定義を受け取り、依存内にも依存を再帰的に書ける。
-- プラグイン固有設定は Lua で書く。Nix の settings 属性を setup 引数へ自動変換する仕組みは今回不要とする。
-- 起動時の共通設定と、対象の読込前後に実行する設定を区別する。具体的な属性名・関数名と loader / wrapper の実装方式は未決とする。
+- Declare and resolve configuration in pure Nix, then load it dynamically with a
+  lightweight Lua runtime.
+- Define the Neovim configuration in Nix, arrange the required files at build
+  time, and use the lightweight runtime for dynamic loading.
+- Managed plugins and their dependencies normally belong in `opt`, including
+  startup-loaded targets. Users are responsible for `after/`-related loading.
+- Use a common plugin definition for startup and deferred targets rather than
+  separate input lists. Explicitly load non-delayed targets at startup while
+  keeping them in `opt`; do not move them to `start`. The loading runtime must
+  be available during `init`.
+- Accept a package alone or the same detailed definition at both roots and
+  dependencies, with recursively nested dependencies.
+- Write plugin-specific configuration in Lua. Automatic conversion of Nix
+  `settings` attributes into plugin `setup` arguments is not needed here.
+- Distinguish common startup configuration from configuration run before and
+  after loading a target. Attribute and function names, and the loader/wrapper
+  implementation approach, remain undecided.
 
+## Resolution strategy
 
-## 解決戦略
+- Let users describe dependency graphs freely, including cycles.
+- Extract strongly connected components (SCCs), using an algorithm such as Tarjan's.
+- Treat each SCC as one load unit.
+- Process dependencies between SCCs as a DAG.
+- Within an SCC, prepare every plugin's runtime before running configuration
+  associated with plugin loading.
 
-- ユーザーが循環を含む依存関係を自由に記述する
-- Tarjan法などでSCCを抽出する
-- 各SCCを1つのロード単位として扱う
-- SCC間の依存関係をDAGとして処理する
-- SCC内部では全プラグインのRuntimeを準備してからプラグイン読み込みタイミングに関連する設定を実行する。
+## Interface design
 
+Build with Nix, assuming inline LSP and Tree-sitter support.
 
-## I/F 設計
+### Required expressiveness
 
-inline lsp, treesitter前提でnixを利用した構築
+Use the same definition format for startup and deferred targets, without
+separate input lists. At both roots and dependencies, accept a package alone or
+the same detailed definition. **A package alone is shorthand, not a restriction
+on dependencies.** A detailed definition can contain the target package, load
+timing, Lua configuration before and after loading, dependencies, and further
+recursive detailed definitions within those dependencies.
 
-### 定義に必要な表現力
+Write plugin-specific configuration as Lua text or Lua files. Automatic
+generation of plugin-specific `setup` arguments from Nix attributes is not
+required. Common startup Lua configuration is separate from configuration run
+before and after loading a target.
 
-起動時に読む対象と遅延して読む対象を別の入力リストに分けず、同じ定義形式で扱う。
-トップレベルにも依存にも、package 単体または同じ詳細定義を記述できる。**package 単体は省略形であり、依存の制約ではない。**
-詳細定義には、対象 package、読込時期、読込前後の Lua 設定、依存などを記述でき、依存の中へさらに同じ詳細定義を再帰的に書ける。
+Use inline Nix strings annotated with `# lua` for configuration in documentation
+and examples, so the Lua content is visible in place. Users can still split their
+configuration into external Lua files; this presentation preference does not
+remove that support.
 
-プラグイン固有の設定は Lua 本文または Lua ファイルで書く。Nix の属性からプラグイン固有の setup 引数を自動生成する仕組みは必要としない。
-起動時の共通 Lua 設定は、対象を読む前後に実行する設定とは分ける。
+### Examples and provisional names
 
-### 記述例と名前の扱い
+The following is an **unimplemented syntax example** illustrating the required
+expressiveness. `plugins`, `plugin`, `dependPlugins`, `lazy`, `preConfig`, `config`,
+`onCommands` and `extraPackages` are provisional names for reading this example,
+not finalized API names.
 
-以下は表現力を確認するための **未実装の記述例**である。`plugins`、`plugin`、`dependPlugins`、`lazy`、`preConfig`、`config`、`onCommands`、`extraPackages` は、この例を読むための仮称であり、確定した API 名ではない。
-確定要件は名前ではなく、共通定義・再帰的な依存・設定の実行タイミング・配置とロードの動作である。正式な属性名、既定値、schema、実装関数は別途決める。
+The fixed requirements concern common definitions, recursive dependencies,
+configuration timing, placement and loading behavior, rather than names. Final
+attribute names, defaults, schema and implementation functions will be decided
+separately.
 
 ```nix
 { pkgs, ... }:
 {
   plugins = [
-    # トップレベルでも依存でも package 単体を使える。
+    # A package alone is valid at both roots and dependencies.
     pkgs.vimPlugins.vim-repeat
 
     {
@@ -50,10 +76,10 @@ inline lsp, treesitter前提でnixを利用した構築
       lazy = true;
       dependPlugins = [
         pkgs.vimPlugins.plenary-nvim
-        # 依存にも同じ詳細定義を書き、さらに依存をネストできる。
+        # Dependencies accept the same detailed definitions and further nesting.
         {
           plugin = pkgs.vimPlugins.vim-startuptime;
-          lazy = false; # この定義も opt のまま起動時にロードする。
+          lazy = false; # Load this at startup while keeping it in opt.
           preConfig = # lua
             ''
               vim.g.startuptime_tries = 10
@@ -67,120 +93,172 @@ inline lsp, treesitter前提でnixを利用した構築
       ];
       onCommands = [ "Telescope" ];
       extraPackages = [ pkgs.ripgrep pkgs.fd ];
-      config = builtins.readFile ./lua/telescope.lua;
+      config = # lua
+        ''
+          require("telescope").setup({})
+        '';
     }
   ];
 }
 ```
 
-この例では、トップレベルと依存の両方に package 単体と詳細定義を混在させ、依存の詳細定義にも読込前後の設定とネストした依存を置いている。
-`Telescope → vim-startuptime → vim-repeat` は再帰構造を示す説明用の依存であり、各プラグインの必須依存を示すものではない。
-非遅延を明示した詳細定義は、依存内にあっても opt のまま起動時ロードの対象になる。親の読込時期を依存へ自動継承する指定ではない。
-package 単体・読込時期の指定省略・trigger がない場合の既定動作は未決である。
+This example mixes packages alone with detailed definitions at both roots and
+dependencies. Detailed dependencies also contain before/after configuration and
+nested dependencies. `Telescope → vim-startuptime → vim-repeat` illustrates the
+recursive structure, not the plugins' actual required dependencies.
 
-例の読込後設定が参照する Lua ファイルには、次のように本体の API を使う処理を書く。
+An explicitly non-delayed detailed definition is a startup target that remains
+in `opt`, even when nested in dependencies. This does not specify automatic
+inheritance of the parent's load timing. Defaults for package shorthand, omitted
+load timing and definitions without triggers remain undecided.
 
-```lua
-require("telescope").setup({})
-```
+The inline after-load configuration in the example calls the plugin's own
+`require("telescope").setup({})` API.
 
-読込前設定の例は、本体の読込時に参照される `vim.g.startuptime_tries` を先に渡している。読込後設定の例は、本体を読んだ後に Lua の設定 API を呼ぶ。
-Nix 内に Lua を直接書く場合は `# lua` の注釈を付け、別ファイルへ分ける場合も Lua のまま編集する。
+The before-load example supplies `vim.g.startuptime_tries` before the plugin reads
+it during loading. The after-load example calls the plugin's Lua configuration
+API after loading it. Annotate inline Lua in Nix with `# lua`; when splitting it
+into another file, keep it as Lua.
 
-### 正規化・同一性・循環
+### Normalization, identity and cycles
 
-Nix 側で package 単体を詳細定義と共通に扱える形へ正規化し、ネストした依存を検証・graph 化する。詳細定義を依存に書けないという制約には置き換えない。
-同一 package の複数出現について、同一性の基準、設定のマージ、異なる読込時期・設定値の競合処理は未決とする。例では `vim-repeat` が2箇所に出るが、黙って統合・破棄する仕様を示してはいない。
-循環を含む強連結成分（SCC）を一つのロード単位として扱う。依存 graph の循環と、Nix 値を直接循環させた場合の評価は別問題であり、循環の入力表現と有限な正規化方法は未決とする。
+On the Nix side, normalize package shorthand into a form shared with detailed
+definitions, validate nested dependencies and construct a graph. Do not replace
+this with a restriction that prevents detailed definitions inside dependencies.
 
-### 配置と設定の実行タイミング
+For repeated occurrences of the same package, the identity criterion, settings
+merge policy and handling of conflicting load timing or configuration remain
+undecided. The example includes `vim-repeat` twice, but does not specify silent
+merging or discarding of occurrences.
 
-管理対象とその依存は原則 opt に配置する。**非遅延指定の対象も opt のまま、起動時に明示ロードする。** 非遅延指定は start 配置への切替を意味しない。
-記述例の `lazy = false` はこの非遅延指定を表す仮の書き方である。遅延対象は指定した trigger で読む。
+Treat each SCC, including cycles, as one load unit. Cycles in the dependency graph
+are distinct from evaluation of directly cyclic Nix values. The input
+representation of cycles and a finite normalization method remain undecided.
+
+### Placement and configuration timing
+
+Managed targets and their dependencies normally belong in `opt`.
+**Non-delayed targets remain in `opt` and are explicitly loaded at startup.**
+A non-delayed declaration does not mean switching placement to `start`.
+The example's `lazy = false` is provisional syntax for this non-delayed behavior.
+Deferred targets load on their specified triggers.
 
 ```text
-起動時の共通設定: 対象の本体を必要とするかに関係なく init で実行
-対象のロード: 読込前の設定（必要な場合）→ 読込（既定 packadd）→ 読込後の設定
-非遅延対象（opt）: 起動時にこの順で明示ロード
-trigger 付き遅延対象（opt）: 最初の trigger 時に同じ順で実行
+Common startup configuration: run during init, whether or not it needs a target's plugin code
+Loading a target: before-load configuration (if needed) → load (default: packadd) → after-load configuration
+Non-delayed target (opt): explicitly load in this order at startup
+Deferred target with triggers (opt): use the same order on the first trigger
 ```
 
-| 設定の役割 | 書く内容の例 |
+| Configuration role | Example contents |
 | --- | --- |
-| 読込前に実行する設定 | 本体が読込時に参照する global 値、必要な依存準備 |
-| 読込後に実行する設定 | 本体の Lua API による setup、本体 API を使うキー割当 |
-| 起動時に行う共通 Lua 設定 | キーの接頭辞、本体を読む command を呼ぶキー割当 |
+| Before loading | Global values read by the plugin during loading; preparation of required dependencies |
+| After loading | Setup through the plugin's Lua API; key mappings using that API |
+| Common startup Lua configuration | Key prefixes; key mappings that invoke commands which load the plugin |
 
-起動時の共通 Lua 設定の例を示す。入力先となる属性名や第三の plugin field の採用は確定しない。
+For example, common startup Lua configuration can contain the following. This
+does not settle the input attribute name or adopt a third plugin field.
 
-```lua
-vim.g.mapleader = " "
-vim.keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>")
+```nix
+# lua
+''
+  vim.g.mapleader = " "
+  vim.keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>")
+''
 ```
 
-起動時ロードでも遅延ロードでも、読込前の設定・読込・読込後の設定という関係は同じである。
-loader / wrapper の実装方式や外部ライブラリの採用は未決であり、この記述例だけから決めない。
+The relationship between before-load configuration, loading and after-load
+configuration is the same for startup and deferred loading. The loader/wrapper
+implementation approach and use of external libraries remain undecided; this
+example alone does not select either.
 
-### 遅延読込の契機
+### Lazy-loading triggers
 
-遅延読込は次の5種類を要件として保持する。これらは機能の説明であり、トリガーを表す属性名・関数名は未決である。
+Retain the following five trigger categories as requirements. They describe
+functionality; the attribute and function names representing triggers remain
+undecided.
 
-| 契機 | 期待する動作 | 条件の例 |
+| Trigger | Expected behavior | Example condition |
 | --- | --- | --- |
-| Neovim のイベント | 指定イベントが発生した時点で対象を読む | 挿入モードへ入るイベント |
-| command の呼出し | 対象を読み、呼び出された command の処理につなぐ | `:Telescope` |
-| buffer の filetype | filetype 条件に一致したときに対象を読む | `nix` / `lua` の buffer |
-| キー操作 | 対象を読んで、そのキー操作に対応する処理につなぐ | `<leader>ff` の操作 |
-| Lua module の require | 必要な本体を読んでから、要求された module の解決につなぐ | `require("telescope.builtin")` |
+| Neovim event | Load the target when the specified event occurs | An event for entering Insert mode |
+| Command invocation | Load the target and hand off to the invoked command | `:Telescope` |
+| Buffer filetype | Load the target when the filetype condition matches | A `nix` or `lua` buffer |
+| Key operation | Load the target and hand off to the original key operation | The `<leader>ff` operation |
+| Lua module require | Load the required plugin before resolving the requested module | `require("telescope.builtin")` |
 
-どの契機でも、対象は opt 配置のまま、必要な読込前設定・読込・読込後設定という共通の流れに入る。
-module 名はプラグイン名とは別に扱う。キー操作そのものをロード契機にする機能は、init に command 呼出し用のキー割当を書くだけの例とは区別する。
-単一条件・複数条件・未指定を表現できることも保持する。条件の記法、module 名の照合範囲、最初の操作やイベントの引継ぎ方法などは実装時に定め、現時点で動作検証済みとはしない。
-イベント条件の具体化や、他の読込を契機とする方式など、参考資料にだけ存在する個別 API の機能を、この表だけから追加の確定要件にはしない。
+For every trigger, the target stays in `opt` and enters the common flow of any
+required before-load configuration, loading and after-load configuration.
+Treat module names separately from plugin names. Loading on the key operation
+itself is distinct from merely defining a key mapping in `init` that invokes a
+command.
 
-### after/ の読込仕様
+Retain the ability to express a single condition, multiple conditions or no
+condition. Define condition syntax, module-name matching scope and the handoff
+of the first operation or event during implementation; do not claim these are
+already behaviorally verified.
 
-既定の読込は通常の `packadd` とする。**起動完了後に opt プラグインを遅延ロードしても `after/plugin` は自動 source しない。**
-`after/plugin` が必要な対象だけ、利用者側の明示的な設定、手動 source、読込処理の差し替え等で対応する。補助ライブラリの既定依存や自動導入は決めない。
+Do not infer additional fixed requirements from features of individual APIs
+that appear only in reference material, such as more specific event conditions
+or loading triggered by another load.
 
-init 中に `packadd` した対象の `after/` は runtimepath の末尾へ加わり、通常のプラグイン読込が有効なら後続の Neovim 標準 `after/plugin` 読込段階で扱われる。
-init 中にも別途 source する独自の読込処理は二重実行の可能性があるため、既定にはしない。
-読込後の設定は読込処理が戻った後に実行するものであり、標準 `after/plugin` 全体の読込完了を保証しない。
+### Loading behavior for after/
 
-`after/ftplugin` は `FileType` に応じて `ftplugin` を runtime 検索する別経路である。`packadd` や読込後設定によって `after/` ディレクトリ内を全部一括実行する仕様にはしない。
-この節は読込仕様を定めるものであり、独自の読込処理を実装・実行検証したという意味ではない。
+Use ordinary `packadd` as the default load operation. **Lazy-loading an `opt`
+plugin after startup does not automatically source `after/plugin`.** For targets
+that need `after/plugin`, users can supply explicit configuration, source it
+manually or replace the load operation. No default dependency on, or automatic
+introduction of, a helper library is selected.
 
-## 実装状態
+For targets loaded with `packadd` during `init`, the `after/` directory is added
+to the end of `runtimepath`. If normal plugin loading is enabled, Neovim's later
+standard `after/plugin` loading phase handles it. A custom operation that also
+sources it during `init` could execute it twice and is therefore not the default.
+After-load configuration runs when the load operation returns; it does not
+guarantee that all standard `after/plugin` loading has completed.
 
-この文書は要求する振る舞いを記述する。入力定義の確認、依存解決の試作と、読込前・読込・読込後の小さな実行処理を用意している。
-有限入力を graph 化して SCC をまとめ、依存優先順と外部 package を抽出する試作を追加した。実装上の暫定判断は [resolution.md](resolution.md) に分け、要件や最終 API として確定しない。
-配置、生成、遅延トリガー、SCC の実行時準備は未実装であり、詳細は TODO.md に記録する。
-属性名は仮称であり、記述例をそのまま実行可能な完成 API として扱わない。
+`after/ftplugin` follows a separate path: runtime lookup of `ftplugin` files for
+`FileType`. Neither `packadd` nor after-load configuration is specified to execute
+everything in the `after/` directory as one batch. This section defines loading
+requirements; it does not claim that a custom load operation has been implemented
+or tested in execution.
 
-## コーディングルール
+## Implementation status
 
-git-hooks.nix (prek) の提供するルールに従う
+This document describes required behavior. Input-definition inspection, a
+dependency-resolution prototype and a small before/load/after primitive are
+available. The prototype converts finite inputs into a graph, groups SCCs and
+extracts dependency-first order and external packages. Provisional implementation
+choices are recorded separately in [resolution.md](resolution.md); they are not
+adopted as requirements or a final API.
 
-### nix
+Placement, generation, lazy triggers and SCC runtime preparation remain
+unimplemented; [TODO.md](../TODO.md) records the details. Attribute names are
+provisional. Do not treat the syntax examples as a complete, directly executable
+API.
 
-- nixdoc (https://github.com/nix-community/nixdoc) 準拠
+## Coding rules
 
+Follow the rules provided by git-hooks.nix (prek).
 
-### lua
+### Nix
 
-- linterやformatterに従う範囲でワンライナー的な記述を心掛ける
+- Follow [nixdoc](https://github.com/nix-community/nixdoc).
 
+### Lua
 
-## サポート
+- Favor concise, one-line-style expressions where the linter and formatter allow.
 
-- イベント、command、filetype、キー操作、Lua module の require を契機とする遅延読込。単一条件・複数条件・未指定を表現できること。具体的な記法と実装方式は未決
-- doc 出力
-- 設定ファイルを分割して記述できること
-- 外部コマンド等の実行時依存を追加できること
-- after/ftdetectのような形式の設定もサポート
+## Supported scope
 
+- Lazy loading on events, command invocation, filetypes, key operations and Lua
+  module requires, with single, multiple or omitted conditions. Concrete syntax
+  and implementation approaches remain undecided.
+- Documentation output.
+- Splitting configuration across files.
+- Adding runtime dependencies such as external commands.
+- Configuration in forms such as `after/ftdetect`.
 
-## サポートしない
+## Out of scope
 
-- denops native サポート (deno runtime EOLのため)
-- hot swap / プラグイン全体の unload・reload を標準機能にすること
+- Native denops support (due to Deno runtime EOL).
+- General hot swap, unload or reload of entire plugins as a standard feature.

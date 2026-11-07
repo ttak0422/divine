@@ -2,7 +2,7 @@
 { pkgs, ... }:
 {
   plugins = [
-    # トップレベルでも依存でも package 単体を使える。
+    # A package alone is valid at both roots and dependencies.
     pkgs.vimPlugins.vim-repeat
 
     {
@@ -10,10 +10,10 @@
       lazy = true;
       dependPlugins = [
         pkgs.vimPlugins.plenary-nvim
-        # 依存にも同じ詳細定義を書き、さらに依存をネストできる。
+        # Dependencies accept the same detailed definitions and further nesting.
         {
           plugin = pkgs.vimPlugins.vim-startuptime;
-          lazy = false; # この定義も opt のまま起動時にロードする。
+          lazy = false; # Load this at startup while keeping it in opt.
           preConfig = # lua
             ''
               vim.g.startuptime_tries = 10
@@ -30,7 +30,10 @@
         pkgs.ripgrep
         pkgs.fd
       ];
-      config = builtins.readFile ./lua/telescope.lua;
+      config = # lua
+        ''
+          require("telescope").setup({})
+        '';
     }
   ];
 }
