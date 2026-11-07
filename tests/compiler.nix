@@ -191,7 +191,7 @@ in
     ) true;
     expectedError.type = "ThrownError";
   };
-  testRejectOperatorPendingKeyMode = {
+  testAcceptOperatorPendingKeyMode = {
     expr = builtins.deepSeq ((compileOne {
       onKeys = {
         lhs = "x";
@@ -199,7 +199,7 @@ in
       };
     }).lua
     ) true;
-    expectedError.type = "ThrownError";
+    expected = true;
   };
   testRejectRelativeRuntimePath = {
     expr = builtins.deepSeq ((api.compile {

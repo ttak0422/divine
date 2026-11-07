@@ -124,9 +124,18 @@ schema choices.
 - `onKeys`: a key string (normal mode), `{ lhs = "..."; mode = "n"; }`, or a list
   of either. The original operation is fed back after loading; normal-mode count
   and register handling are tested, along with insert and visual operations.
-  Operator-pending lazy keys (`mode = "o"`) are rejected before registration:
-  replay cannot safely preserve every pending operation. Load the target at
-  startup and let it define its own operator-pending mappings instead.
+  Operator-pending keys (`mode = "o"`) load through an expression mapping and
+  hand the key back without leaving the pending operation. The first invocation
+  is compared with loaded/native mappings for `d`, `g~`, forced linewise `dV`,
+  operator/motion counts and named registers.
+  Loading an operator-pending target runs under Neovim's `textlock`: configuration
+  and plugin scripts must not edit buffers, move the cursor or switch windows
+  during that load. Buffer edits raise `E565`; the unit retains the failure,
+  removes its trigger stubs, reports the error and cancels the pending operator.
+  It does not replay the key or retry automatically.
+  Partial configuration effects are not rolled back. Load such targets at
+  startup instead, or defer nonessential edits explicitly (deferred work runs
+  after the pending operation, not before its motion).
   Select and terminal mode coverage remains open.
 - `onModules`: exact Lua module names or dotted namespace prefixes. `foo` matches
   `foo` and `foo.bar`, not `foobar`. The existing Lua searcher chain resumes after

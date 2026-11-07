@@ -15,6 +15,7 @@ suites
     expr = builtins.mapAttrs (_: suite: builtins.attrNames suite) suites;
     expected = {
       options = [
+        "testAcceptOperatorPendingKeyMode"
         "testDoNotEvaluatePackageModuleMetadata"
         "testNestedNullAndStartup"
         "testNoSyntheticTriggerConflict"
@@ -35,7 +36,6 @@ suites
         "testRejectNestedUnknown"
         "testRejectNullConfig"
         "testRejectNullTrigger"
-        "testRejectOperatorPendingKeyMode"
         "testRejectTimingModuleProperty"
         "testRejectTriggerModuleProperty"
         "testRejectUnknownKey"
@@ -85,6 +85,7 @@ suites
         "testTimingConflict"
       ];
       compiler = [
+        "testAcceptOperatorPendingKeyMode"
         "testDefaultStartupDetailedAndNested"
         "testDefaultStartupShorthand"
         "testDependencyStartupUnit"
@@ -97,7 +98,6 @@ suites
         "testRejectEmptyCommand"
         "testRejectInvalidConfig"
         "testRejectInvalidKeyMode"
-        "testRejectOperatorPendingKeyMode"
         "testRejectRelativeRuntimePath"
         "testRejectUnknownRootSettings"
         "testRejectUnknownSettings"

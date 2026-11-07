@@ -326,18 +326,69 @@ T["hands off visual-mode keys"] = case(function(f)
   assert(count() == 1 and vim.api.nvim_get_current_line() == "WORD")
 end)
 
-T["rejects operator-pending keys before installing any triggers"] = case(function(f)
-  vim.keymap.set("o", "<F14>", "iw")
-  local mapping = vim.fn.maparg("<F14>", "o", false, true)
-  local before = vim.api.nvim_get_autocmds({ event = "User" })
-  local ok, err = pcall(f.triggers.register, { load = function() error("unexpected load") end }, {
-    a = { triggers = { events = { "User" }, commands = { "DivineUninstalled" } } },
-    z = { triggers = { keys = { { lhs = "<F14>", mode = "o" } } } },
+T["hands off operator-pending keys without reconstructing operators"] = case(function(f)
+  f.write("operatorkey", "plugin/key.lua", {
+    'vim.keymap.set("o", "<F14>", "w")',
   })
-  assert(not ok and tostring(err):find("operator-pending lazy keys are unsupported", 1, true))
-  assert(vim.fn.exists(":DivineUninstalled") == 0)
-  assert(vim.deep_equal(vim.api.nvim_get_autocmds({ event = "User" }), before))
-  assert(vim.deep_equal(vim.fn.maparg("<F14>", "o", false, true), mapping))
+  for _, keys in ipairs({ "d<F14>", "g~<F14>", "dV<F14>", '"a2d3<F14>', "2g~3<F14>" }) do
+    local function run()
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+        "one two three four five six seven eight",
+        "second line",
+        "third line",
+      })
+      vim.api.nvim_win_set_cursor(0, { 1, 0 })
+      vim.fn.setreg('"', "initial")
+      vim.fn.setreg("a", "initial")
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, false, true), "xt", false)
+      return {
+        lines = vim.api.nvim_buf_get_lines(0, 0, -1, false),
+        cursor = vim.api.nvim_win_get_cursor(0),
+        unnamed = vim.fn.getreg('"'),
+        named = vim.fn.getreg("a"),
+        register_type = vim.fn.getregtype('"'),
+        mode = vim.api.nvim_get_mode().mode,
+      }
+    end
+    vim.keymap.set("o", "<F14>", "w")
+    local native = run()
+    vim.keymap.del("o", "<F14>")
+    local count = f.setup("operatorkey", { keys = { { lhs = "<F14>", mode = "o" } } })
+    assert(vim.deep_equal(run(), native), "first operation differs: " .. keys)
+    assert(vim.deep_equal(run(), native), "loaded operation differs: " .. keys)
+    assert(count() == 1)
+    vim.keymap.del("o", "<F14>")
+  end
+end)
+
+T["cleans failed operator triggers when configuration violates textlock"] = case(function(f)
+  f.write("lockedkey", "plugin/key.lua", { "vim.g.divine_locked_plugin = true" })
+  local calls = 0
+  local controller = require("divine").setup({
+    nodes = {
+      lockedkey = {
+        name = "lockedkey",
+        triggers = { keys = { { lhs = "<F14>", mode = "o" } }, commands = { "DivineLocked" } },
+        before = function()
+          calls = calls + 1
+          vim.api.nvim_buf_set_lines(0, 0, -1, false, { "unexpected edit" })
+        end,
+      },
+    },
+    units = { { id = "lockedkey", members = { "lockedkey" }, dependencies = {} } },
+  })
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, { "one two" })
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("d<F14>", true, false, true), "xt", false)
+  assert(controller.states.lockedkey == "failed")
+  assert(controller.errors.lockedkey:find("E565", 1, true), controller.errors.lockedkey)
+  assert(vim.v.errmsg:find("E565", 1, true), vim.v.errmsg)
+  assert(vim.api.nvim_get_current_line() == "one two")
+  assert(vim.api.nvim_get_mode().mode == "n", vim.inspect(vim.api.nvim_get_mode()))
+  assert(vim.fn.maparg("<F14>", "o") == "")
+  assert(vim.fn.exists(":DivineLocked") == 0)
+  assert(not vim.g.divine_locked_plugin)
+  local ok, err = pcall(controller.load, "lockedkey")
+  assert(not ok and err == controller.errors.lockedkey and calls == 1)
 end)
 
 T["expands leader keys after common startup configuration"] = case(function(f)

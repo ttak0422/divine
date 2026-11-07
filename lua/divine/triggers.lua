@@ -1,4 +1,4 @@
----@alias divine.KeyMode 'n'|'x'|'s'|'i'|'t'
+---@alias divine.KeyMode 'n'|'x'|'s'|'i'|'t'|'o'
 ---@alias divine.Cleanup fun(id: divine.NodeId)
 ---@alias divine.Activate fun()
 ---@alias divine.ModuleSearcher fun(name: string): (fun(): any)|string
@@ -141,10 +141,7 @@ function M.register(controller, nodes)
             if field ~= "lhs" and field ~= "mode" then fail("unknown key field " .. field) end
           end
           local mode = key.mode or "n"
-          if mode == "o" then
-            fail("operator-pending lazy keys are unsupported; load the target at startup instead")
-          end
-          if not vim.tbl_contains({ "n", "x", "s", "i", "t" }, mode) then
+          if not vim.tbl_contains({ "n", "x", "s", "i", "t", "o" }, mode) then
             fail("unsupported key mode " .. tostring(mode))
           end
           local signature = mode .. ":" .. key.lhs
@@ -301,9 +298,21 @@ function M.register(controller, nodes)
     for _, key in ipairs(triggers.keys or {}) do
       local mode = key.mode or "n"
       local lhs = key.lhs
-      ---@return nil
+      ---@return string?
       local function callback()
         local count, register = vim.v.count, vim.v.register
+        if mode == "o" then
+          local ok, err = pcall(load, id)
+          if not ok then
+            -- An expression error alone leaves the operator pending. Report
+            -- the retained failure and cancel instead of replaying the key.
+            vim.api.nvim_echo({ { tostring(err), "ErrorMsg" } }, true, { err = true })
+            return "<Esc>"
+          end
+          -- Keep the pending operator in Neovim. The leading no-op allows the
+          -- same lhs to be remapped to its newly installed definition.
+          return "<Ignore>" .. lhs
+        end
         load(id)
         local prefix = ""
         if mode == "n" or mode == "x" then
@@ -316,7 +325,12 @@ function M.register(controller, nodes)
           false
         )
       end
-      vim.keymap.set(mode, lhs, callback, { silent = true, desc = "divine lazy trigger" })
+      vim.keymap.set(mode, lhs, callback, {
+        silent = true,
+        desc = "divine lazy trigger",
+        expr = mode == "o",
+        remap = mode == "o",
+      })
       for _, mapping in ipairs(vim.api.nvim_get_keymap(mode)) do
         if mapping.callback == callback then lhs = mapping.lhs end
       end

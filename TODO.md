@@ -20,7 +20,7 @@ item does not mean its design has been accepted.
 - [ ] **EVENT**: native group replay covers API/Vimscript once and script context; broaden real-plugin event compatibility beyond isolated fixtures.
 - [x] **COMMAND**: native command stubs and invocation/completion handoff; see runtime fixtures for verified argument forms.
 - [x] **FILETYPE**: match current/new buffers and handle new ftplugin/after-ftplugin separately.
-- [ ] **KEY**: key operation replay is implemented with normal-mode count/register and insert/visual coverage; operator-pending lazy keys are rejected; add select/terminal fixtures.
+- [ ] **KEY**: key operation replay is implemented with normal-mode count/register and insert/visual coverage; operator-pending keys retain native state with a textlock-bound load; add select/terminal fixtures.
 - [x] **MODULE**: native require handoff with proposed exact/dotted namespace matching and recursion protection.
 - [ ] **DOCS**: generate configuration documentation from resolved input and record source provenance.
 - [x] **FAILURES**: proposed unit states, retained errors, reentry and no automatic retry; tested with shared dependencies and native triggers.

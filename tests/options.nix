@@ -246,16 +246,22 @@ in
       }
     ];
   };
-  testRejectOperatorPendingKeyMode = invalid {
-    plugins = [
-      {
-        plugin = a;
-        onKeys = {
-          lhs = "x";
-          mode = "o";
-        };
-      }
-    ];
+  testAcceptOperatorPendingKeyMode = {
+    expr =
+      builtins.deepSeq
+        (api.compile {
+          plugins = [
+            {
+              plugin = a;
+              onKeys = {
+                lhs = "x";
+                mode = "o";
+              };
+            }
+          ];
+        }).lua
+        true;
+    expected = true;
   };
   testRejectUnknownKey = invalid {
     plugins = [
