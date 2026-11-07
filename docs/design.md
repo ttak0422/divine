@@ -20,6 +20,20 @@
   after loading a target. Attribute and function names, and the loader/wrapper
   implementation approach, remain undecided.
 
+## Package dependency metadata
+
+Plugin-loading dependencies come only from divine's explicit declarations.
+Ignore plugin dependencies recorded in a package derivation, including nixpkgs
+Vim plugins' `dependencies`, when constructing the load graph, opt tree and
+runtime plan. A dependency required at runtime must be declared explicitly with
+the same recursive definition format, even if nixpkgs already lists it.
+
+Do not clear or override the original derivation's dependency attributes to
+implement this rule. Preserve its output, build/check dependencies and other
+package metadata. Explicit divine plugin dependencies and global or recursive
+`extraPackages` continue to work. This rule concerns automatic plugin loading,
+not pruning Nix's build or runtime closure.
+
 ## Resolution strategy
 
 - Let users describe dependency graphs freely, including cycles.

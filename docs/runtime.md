@@ -13,8 +13,25 @@ still apply.
 `init.lua`, `plan.lua`, the Lua runtime and `pack/divine/opt` symlinks. The full
 output-path hash names each symlink, so equal package display names do not collide.
 No package is promoted into `start`, and no external loader or wrapper is used.
-Only explicitly declared configuration dependencies are placed; package passthru
-metadata is not interpreted as a second dependency graph.
+Only explicitly declared configuration dependencies are placed; a package's
+`dependencies` metadata is not interpreted as a second dependency graph. This is
+an explicit requirement, not an instruction to remove dependency attributes from
+the derivation. The original package output and its build/check inputs remain
+unchanged. Required runtime plugins must be declared in `dependPlugins` even if
+nixpkgs also lists them; recursive `extraPackages` remains independent.
+
+In the pinned nixpkgs, [vimUtils.packDir](https://github.com/NixOS/nixpkgs/blob/0bb2eedc20e4739f29e8045034f2828ad7054f8f/pkgs/applications/editors/vim/plugins/utils/vim-utils.nix#L160-L224)
+recursively expands `dependencies` and
+places dependencies of opt plugins in `start` unless the same outputs are already
+in opt. An explicitly selected variant can therefore coexist with the original
+implicit dependency. Divine does not use that packaging helper. Its direct opt
+links already enforce this boundary without rebuilding or stripping packages.
+Neovim itself does not interpret Nix dependency attributes.
+
+This does not remove plugins injected by an independently configured Neovim
+wrapper, another packpath or a plugin's own loader. Avoid separately installing
+the same managed plugins through such a wrapper. The ordinary native startup
+rescan described below is also separate from dependency expansion.
 
 The bundle can be used with `nvim -u /path/to/bundle/init.lua`. Its init entry adds
 the bundle to runtimepath and packpath, prepends all recursively collected
@@ -119,7 +136,16 @@ existing headless runtime check now runs isolated primitives, real opt/SCC
 fixtures and native trigger fixtures. The bundle build check starts a fresh
 Neovim with generated init, validates opt layout, startup/configuration phases,
 command and module handoff, native after/plugin behavior and an external tool.
-These tests use small synthetic plugin packages, not a third-party plugin suite.
+The `nixpkgs-dependencies` check separately uses the pinned real
+`vim-textobj-entire`, `vim-textobj-line` and their shared `vim-textobj-user`.
+It reproduces two discoverable dependency outputs with nixpkgs' packDir and an
+explicitly selected variant, then verifies divine excludes implicit dependencies,
+loads only the selected shared dependency, preserves the original parent
+derivation, and keeps a nested external tool. Actual entire-buffer and deferred
+line text-object operations run in fresh Neovim processes. The reference checks
+duplicate runtime candidates, not a claim that guarded plugin code always
+executes twice. This focused regression is not a broad third-party compatibility
+suite.
 The selected nix-unit method is recorded separately in
 [ADR 0006](adr/0006-use-nix-unit.md). Adopting the test method does not accept the
 proposed runtime behavior asserted by its fixtures.

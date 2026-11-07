@@ -67,6 +67,7 @@
                 -c 'lua dofile("${./tests/bundle.lua}")' -c 'qa!'
               touch "$out"
             '';
+          nixpkgs-dependencies = import ./tests/nixpkgs-dependencies.nix { inherit pkgs; };
           runtime =
             pkgs.runCommand "divine-runtime-tests"
               {

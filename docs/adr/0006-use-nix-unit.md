@@ -48,8 +48,8 @@ No host daemon change is required; Lix-linked nix-unit has not been validated.
 
 ## Implementation and Verification
 
-[tests/default.nix](../../tests/default.nix) discovers 10 input, 27 resolver and
-14 compiler cases. A 52nd case verifies every expected name, because an empty
+At adoption, [tests/default.nix](../../tests/default.nix) discovered 10 input,
+27 resolver and 14 compiler cases. A 52nd case verified every expected name, because an empty
 nix-unit suite can otherwise succeed. [tests/nix-unit-runner.sh](../../tests/nix-unit-runner.sh)
 requires successful cases to pass and named deliberate failures to exit nonzero.
 

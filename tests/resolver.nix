@@ -173,6 +173,27 @@ let
       }
     ];
   };
+  packaged = a // {
+    dependencies = [ c ];
+    nativeBuildInputs = [ toolRoot ];
+    buildInputs = [ toolDep ];
+    propagatedBuildInputs = [ toolDeep ];
+  };
+  packagedGraph = resolve {
+    plugins = [
+      {
+        plugin = packaged;
+        lazy = false;
+        dependPlugins = [
+          {
+            plugin = b;
+            lazy = true;
+          }
+        ];
+        extraPackages = [ toolGlobal ];
+      }
+    ];
+  };
   conflicts = field: x: y: {
     plugins = [
       ({ plugin = a; } // { ${field} = x; })
@@ -181,6 +202,45 @@ let
   };
 in
 {
+  testIgnorePackagePluginDependencies = {
+    expr =
+      builtins.attrNames packagedGraph.nodes == map id [
+        a
+        b
+      ]
+      && packagedGraph.nodes.${id a}.dependencies == [ (id b) ];
+    expected = true;
+  };
+  testPreservePackageBuildInputs = {
+    expr =
+      let
+        retained = packagedGraph.nodes.${id a}.package;
+      in
+      retained.dependencies == [ c ]
+      && retained.nativeBuildInputs == [ toolRoot ]
+      && retained.buildInputs == [ toolDep ]
+      && retained.propagatedBuildInputs == [ toolDeep ]
+      && packagedGraph.extraPackages == [ toolGlobal ];
+    expected = true;
+  };
+  testDoNotEvaluatePackagePluginDependencies = {
+    expr =
+      builtins.attrNames
+        (resolve {
+          plugins = [
+            {
+              plugin = a // {
+                dependencies = throw "root metadata must not be evaluated";
+              };
+              dependPlugins = [ (b // { dependencies = throw "nested metadata must not be evaluated"; }) ];
+            }
+          ];
+        }).nodes == map id [
+        a
+        b
+      ];
+    expected = true;
+  };
   testEmpty = {
     expr = (resolve { plugins = [ ]; }).units == [ ];
     expected = true;

@@ -37,6 +37,16 @@ recursive Nix value. Both detailed definitions and deeper nested dependencies
 remain valid. Directly cyclic Nix values are still outside this evaluator's
 finite input; an alternative reference/identity API remains open for review.
 
+## Explicit versus package dependencies
+
+Only `dependPlugins` in divine definitions contributes plugin edges. A package's
+own `dependencies` field is neither traversed nor evaluated for loading, including
+when the package is shorthand or an explicitly declared dependency. Original
+package values and their Nix dependency context are retained unchanged. The
+resolver does not remove build inputs, propagated inputs or package metadata.
+This loading boundary is a requirement in [design.md](design.md#package-dependency-metadata),
+not an acceptance of the provisional identity or timing policies below.
+
 ## Identity and repeated definitions
 
 - **Identity:** the package's output path, not its display name. Distinct output

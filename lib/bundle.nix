@@ -19,7 +19,8 @@ let
     return require("divine").setup(dofile(root .. "/plan.lua"))
   '';
 in
-# Do not use a package wrapper that promotes plugin dependencies into start.
+# Keep package derivations intact. Only the explicit graph controls loading;
+# nixpkgs packDir would promote their implicit plugin dependencies into start.
 pkgs.runCommand "divine-bundle" { passthru = { inherit (compiled) graph; }; } ''
   mkdir -p "$out/pack/divine/opt" "$out/lua"
   cp -R ${../lua/divine} "$out/lua/divine"

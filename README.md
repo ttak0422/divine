@@ -40,9 +40,11 @@ lib.mkBundle {
 
 Run Neovim with `nvim -u /path/to/bundle/init.lua`. Explicit `lazy = false` entries
 stay in opt and load during init. The bundle places only explicitly declared
-configuration dependencies, without package-wrapper promotion to start.
-This example demonstrates the interface; the automated suite uses synthetic
-plugins rather than claiming telescope compatibility.
+configuration dependencies, ignoring nixpkgs plugin `dependencies` for loading
+without rewriting the original derivations or promoting plugins to start.
+Required runtime plugins must be declared explicitly, as above. The test suite
+covers synthetic plugins and a real text-object dependency regression; it does
+not yet claim telescope compatibility.
 
 See [runtime.md](docs/runtime.md) for executable plan structure, trigger syntax,
 SCC phases, failure states and native startup limitations. Ordinary packadd during
@@ -66,7 +68,7 @@ it does not execute the nix-unit or runtime tests or prove builds on every syste
 `make test-nix` runs the locked flake's named suite through nix-unit, then tests
 the runner's success, mismatch and unexpected-error exit behavior. It replaces
 the previous default path that printed `<LAMBDA>` without executing assertions.
-The suite contains 10 input, 27 resolver and 14 compiler cases, plus a discovery
+The suite contains 10 input, 30 resolver and 14 compiler cases, plus a discovery
 regression that checks every expected case name to prevent empty suites from
 passing unnoticed. Evaluation failures use nix-unit's `expectedError` contract.
 
@@ -90,7 +92,10 @@ so its sandbox does not fetch the flake or access the host daemon. Full
 `make test-lua` runs the isolated load primitive, opt/SCC runtime and native trigger
 fixtures. The flake also builds a fixture bundle and starts Neovim through its
 generated init, checking placement, startup, command/module handoff, after/plugin
-phases and collected tools. There is no NixOS VM or snapshot framework dependency.
+phases and collected tools. A separate `nixpkgs-dependencies` check reproduces
+implicit dependency promotion with real text-object plugins and verifies divine's
+explicit-only graph, shared selected dependency and actual text-object operations.
+There is no NixOS VM or snapshot framework dependency.
 
 ## Design and review
 
@@ -101,4 +106,4 @@ phases and collected tools. There is no NixOS VM or snapshot framework dependenc
 - [TODO.md](TODO.md) tracks remaining review choices and missing coverage.
 
 No design decision becomes accepted merely because a test or implementation exists.
-Third-party plugin compatibility and a separate Neovim 0.12.4 run remain unverified.
+Broader third-party compatibility and a separate Neovim 0.12.4 run remain unverified.
