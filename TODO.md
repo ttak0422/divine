@@ -6,7 +6,8 @@ The design snapshot remains the behavior contract.
 item does not mean its design has been accepted.
 
 - [ ] **API**: choose public names/schema; root and dependency definitions must keep the same recursive expressiveness.
-- [ ] **DEFAULTS**: lazy defaults to true for shorthand and omitted timing; remaining triggerless policy and unspecified/single/multiple trigger representation need review.
+- [x] **DEFAULTS**: `lazy` defaults to `false` after merging repeated definitions at every dependency depth; omission and `null` leave timing unspecified until then. Triggers do not imply deferral; use explicit `lazy = true`.
+- [ ] **TRIGGER-POLICY**: review triggerless deferred loading and omitted/single/multiple trigger representations; the prototype supports prerequisite/manual loading without triggers, but these policies remain provisional.
 - [ ] **IDENTITY**: review/adopt or revise the prototype's output-path identity, field equality/conflict errors, edge/tool unions and retained provenance; see docs/resolution.md.
 - [ ] **CYCLES**: review/adopt or revise finite back-references through package identity; directly cyclic Nix values remain distinct from finite cyclic graphs.
 - [x] **INPUT-SCHEMA**: validate compiler inputs with mkOption types/descriptions and nullable timing before the existing resolver; public module API and generated documentation remain separate.
@@ -16,7 +17,7 @@ item does not mean its design has been accepted.
 - [ ] **STARTUP-DEMAND**: review the prototype's dependency-closure startup demand, which retains original timing declarations and opt placement.
 - [x] **PACKAGING**: build opt-only trees for explicit configuration dependencies and check no start promotion.
 - [x] **GENERATION**: emit Lua callbacks from text/files and add recursive external tools and runtimePaths.
-- [x] **STARTUP**: generated init registers the runtime and loads explicit startup demand through the shared SCC path.
+- [x] **STARTUP**: generated init registers the runtime and loads resolved startup demand, including default startup targets, through the shared SCC path.
 - [ ] **EVENT**: native group replay covers API/Vimscript once and script context; broaden real-plugin event compatibility beyond isolated fixtures.
 - [x] **COMMAND**: native command stubs and invocation/completion handoff; see runtime fixtures for verified argument forms.
 - [x] **FILETYPE**: match current/new buffers and handle new ftplugin/after-ftplugin separately.
