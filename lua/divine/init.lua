@@ -142,8 +142,10 @@ function M.setup(plan)
             )
             loading[member] = nil
             if not success then
-              package_errors[member] = message
-              error(message, 0)
+              -- debug.traceback preserves non-string errors, including false.
+              -- Cache a truthy diagnostic so overlapping units cannot retry.
+              package_errors[member] = tostring(message)
+              error(package_errors[member], 0)
             end
             loaded[member] = true
           end

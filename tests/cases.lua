@@ -32,6 +32,7 @@ return {
     "isolated plan / rejects unknown manual node and unit identifiers without loading",
     "isolated plan / retains after failures without automatic retry",
     "isolated plan / retains before failures without automatic retry",
+    "isolated plan / retains falsey shared failures without retrying overlapping groups",
     "isolated plan / retains load failures without automatic retry",
     "isolated plan / retains packadd failures without automatic retry",
     "isolated plan / retains prerequisite and dependent failures",

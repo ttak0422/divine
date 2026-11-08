@@ -253,6 +253,42 @@ mocked["retains shared package failures across overlapping configurations"] = ca
   assert(attempts == 1 and controller.states.second == "failed")
 end)
 
+mocked["retains falsey shared failures without retrying overlapping groups"] = case(function(f)
+  for _, payload in ipairs({
+    { name = "false", raise = function() error(false) end },
+    { name = "nil", raise = function() error(nil) end },
+  }) do
+    local attempts, configured = 0, 0
+    local controller = f.runtime.setup({
+      nodes = { a = { name = "a" } },
+      configurations = {
+        first = {
+          members = { "a" },
+          load = function()
+            attempts = attempts + 1
+            payload.raise()
+          end,
+        },
+        second = {
+          members = { "a" },
+          load = function() attempts = attempts + 1 end,
+          after = function() configured = configured + 1 end,
+        },
+      },
+      units = {
+        { id = "first", members = { "a" }, configurations = { "first" }, dependencies = {} },
+        { id = "second", members = { "a" }, configurations = { "second" }, dependencies = {} },
+      },
+    })
+    for _, id in ipairs({ "first", "second", "first", "second" }) do
+      local ok, err = pcall(controller.load, id)
+      assert(not ok and type(err) == "string" and err:find(payload.name, 1, true))
+      assert(controller.states[id] == "failed")
+      assert(attempts == 1 and configured == 0)
+    end
+  end
+end)
+
 mocked["keeps singleton configuration separate from package group membership"] = case(function(f)
   local controller = f.runtime.setup({
     nodes = { a = { name = "a", after = function() f.record("config:singleton") end } },
