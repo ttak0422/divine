@@ -40,6 +40,8 @@ return {
     "isolated plan / supports an empty compiled plan",
     "isolated plan / uses the custom load hook between before and after",
     "native opt tree / hands the first command to an ordered group after shared configuration",
+    "native opt tree / loads triggerless prerequisites on first command demand",
+    "native opt tree / loads triggerless startup prerequisites and leaves unrelated targets for manual demand",
     "native opt tree / prepares peer modules before SCC callbacks without sourcing after-plugin",
   },
   ["tests/triggers.lua"] = {

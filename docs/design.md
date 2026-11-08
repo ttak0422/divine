@@ -132,6 +132,13 @@ package, preserving explicit timing declarations. Explicit `lazy = null` also me
 use deferred loading selectively, mainly for occasional tools rather than
 everyday editing features.
 
+Startup demand includes all prerequisites, even those declaring `lazy = true`,
+without changing their declared timing or opt placement. See
+[ADR 0004](adr/0004-startup-demand.md). A target with `lazy = true` and no triggers
+loads only on prerequisite or manual demand, as accepted in
+[ADR 0010](adr/0010-triggerless-deferred-loading.md). These policies do not choose
+public trigger syntax or stable manual group references.
+
 The inline after-load configuration in the example calls the plugin's own
 `require("telescope").setup({})` API.
 

@@ -399,7 +399,87 @@ in
     expectedError.type = "ThrownError";
   };
   testTriggerlessDeferredPlan = {
-    expr = (compileOne { }).plan.nodes.${id a}.triggers.commands == [ ];
+    expr =
+      let
+        result = compileOne { };
+      in
+      result.graph.nodes.${id a}.settings.lazy
+      && result.plan.startup_units == [ ]
+      && lib.all (triggers: triggers == [ ]) (builtins.attrValues result.plan.nodes.${id a}.triggers);
+    expected = true;
+  };
+  testStartupDemandRetainsDeferredDependency = {
+    expr =
+      let
+        result = api.compile {
+          plugins = [
+            {
+              plugin = a;
+              dependPlugins = [
+                {
+                  plugin = b;
+                  lazy = true;
+                }
+              ];
+            }
+          ];
+        };
+      in
+      result.plan.startup_units == [
+        (id b)
+        (id a)
+      ]
+      && !result.graph.nodes.${id a}.settings.lazy
+      && result.graph.nodes.${id b}.settings.lazy
+      && lib.all (node: node.placement == "opt") (builtins.attrValues result.graph.nodes)
+      && lib.all (triggers: triggers == [ ]) (builtins.attrValues result.plan.nodes.${id b}.triggers);
+    expected = true;
+  };
+  testTriggerlessPrerequisiteOfDeferredTarget = {
+    expr =
+      let
+        result = api.compile {
+          plugins = [
+            {
+              plugin = a;
+              lazy = true;
+              onCommands = "Example";
+              dependPlugins = [
+                {
+                  plugin = b;
+                  lazy = true;
+                }
+              ];
+            }
+          ];
+        };
+        dependent = lib.findFirst (unit: unit.id == id a) null result.plan.units;
+      in
+      result.plan.startup_units == [ ]
+      && dependent.dependencies == [ (id b) ]
+      && result.graph.nodes.${id b}.settings.lazy
+      && lib.all (triggers: triggers == [ ]) (builtins.attrValues result.plan.nodes.${id b}.triggers);
+    expected = true;
+  };
+  testTriggersDoNotImplyDeferredLoading = {
+    expr =
+      lib.all
+        (
+          triggers:
+          let
+            result = api.compile { plugins = [ ({ plugin = a; } // triggers) ]; };
+          in
+          builtins.deepSeq result.lua (
+            !result.graph.nodes.${id a}.settings.lazy && result.plan.startup_units == [ (id a) ]
+          )
+        )
+        [
+          { onEvents = "BufEnter"; }
+          { onCommands = "Example"; }
+          { onFiletypes = "lua"; }
+          { onKeys = "<F9>"; }
+          { onModules = "example"; }
+        ];
     expected = true;
   };
 }

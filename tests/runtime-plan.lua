@@ -332,9 +332,88 @@ mocked["rejects cross-group reentry before shared physical loading completes"] =
   f.equal("prepare:a,cleanup:first")
 end)
 
--- The real opt-tree case uses a fresh child with no command or trigger stubs.
+-- The real opt-tree cases use fresh children with no command or trigger stubs.
 local native, native_case = require("tests.helpers").new_child_set("native")
 T["native opt tree"] = native
+native["loads triggerless startup prerequisites and leaves unrelated targets for manual demand"] = native_case(
+  function(f)
+    for _, name in ipairs({ "early", "dep", "manual" }) do
+      f.write("demand-" .. name, "plugin/main.lua", {
+        "vim.g.divine_demand_order = (vim.g.divine_demand_order or '') .. '" .. name .. ",'",
+      })
+    end
+    local controller = require("divine").setup({
+      nodes = {
+        early = {
+          name = "demand-early",
+          before = function() assert(vim.g.divine_demand_order == "dep,configured-dep,") end,
+        },
+        dep = {
+          name = "demand-dep",
+          after = function()
+            vim.g.divine_demand_order = vim.g.divine_demand_order .. "configured-dep,"
+          end,
+        },
+        manual = { name = "demand-manual" },
+      },
+      units = {
+        { id = "dep", members = { "dep" }, dependencies = {} },
+        { id = "early", members = { "early" }, dependencies = { "dep" } },
+        { id = "manual", members = { "manual" }, dependencies = {} },
+      },
+      startup_units = { "dep", "early" },
+    })
+    assert(vim.g.divine_demand_order == "dep,configured-dep,early,")
+    assert(controller.states.dep == "loaded" and controller.states.early == "loaded")
+    assert(controller.states.manual == "unloaded")
+    controller.load("manual")
+    controller.load("manual")
+    controller.load("early")
+    assert(controller.states.manual == "loaded")
+    assert(vim.g.divine_demand_order == "dep,configured-dep,early,manual,")
+  end
+)
+
+native["loads triggerless prerequisites on first command demand"] = native_case(function(f)
+  f.write("command-dep", "plugin/main.lua", {
+    "vim.g.divine_command_dep_loads = (vim.g.divine_command_dep_loads or 0) + 1",
+  })
+  f.write("command-target", "plugin/main.lua", {
+    "assert(vim.g.divine_command_dep_loads == 1)",
+    "assert(vim.g.divine_command_dep_ready)",
+    "vim.g.divine_command_loads = (vim.g.divine_command_loads or 0) + 1",
+    "vim.api.nvim_create_user_command('DivineDemand', function()",
+    "  assert(vim.g.divine_command_ready)",
+    "  vim.g.divine_command_calls = (vim.g.divine_command_calls or 0) + 1",
+    "end, {})",
+  })
+  local controller = require("divine").setup({
+    nodes = {
+      target = {
+        name = "command-target",
+        triggers = { commands = { "DivineDemand" } },
+        after = function() vim.g.divine_command_ready = true end,
+      },
+      dep = {
+        name = "command-dep",
+        after = function() vim.g.divine_command_dep_ready = true end,
+      },
+    },
+    units = {
+      { id = "dep", members = { "dep" }, dependencies = {} },
+      { id = "target", members = { "target" }, dependencies = { "dep" } },
+    },
+    startup_units = {},
+  })
+  assert(controller.states.dep == "unloaded" and controller.states.target == "unloaded")
+  assert(vim.g.divine_command_dep_loads == nil and vim.g.divine_command_loads == nil)
+  vim.cmd.DivineDemand()
+  vim.cmd.DivineDemand()
+  assert(controller.states.dep == "loaded" and controller.states.target == "loaded")
+  assert(vim.g.divine_command_dep_loads == 1 and vim.g.divine_command_loads == 1)
+  assert(vim.g.divine_command_calls == 2)
+end)
+
 native["prepares peer modules before SCC callbacks without sourcing after-plugin"] = native_case(
   function(f)
     for _, name in ipairs({ "divine-fixture-a", "divine-fixture-b" }) do

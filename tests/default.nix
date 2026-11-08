@@ -182,7 +182,10 @@ suites
         "testRejectUnknownEvent"
         "testRejectUnknownRootSettings"
         "testRejectUnknownSettings"
+        "testStartupDemandRetainsDeferredDependency"
         "testTriggerlessDeferredPlan"
+        "testTriggerlessPrerequisiteOfDeferredTarget"
+        "testTriggersDoNotImplyDeferredLoading"
         "testUniquePluginNames"
       ];
     };

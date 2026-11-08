@@ -11,8 +11,9 @@ Review status and reasoning are also indexed in the [ADRs](adr/README.md):
 [identity and finite references](adr/0001-output-path-identity.md),
 [repeated definitions](adr/0002-repeated-definitions.md),
 [SCC extraction](adr/0003-prototype-scc-extraction.md), and
-[startup demand](adr/0004-startup-demand.md). ADR 0001 is `accepted`; ADRs 0002,
-0003 and 0004 remain `proposed`. Existing implementations and passing tests do not
+[startup demand](adr/0004-startup-demand.md). ADRs 0001 and 0004 are `accepted`; ADRs 0002
+and 0003 remain `proposed`. [Triggerless deferred loading](adr/0010-triggerless-deferred-loading.md)
+is accepted separately in ADR 0010. Existing implementations and passing tests do not
 by themselves establish design acceptance.
 
 ## Input and finite cycles
@@ -161,14 +162,20 @@ non-delayed ones. A singleton declaration or group configuration with resolved
 membership alone does not create an extra singleton startup demand. That demand propagates
 through the unit's prerequisites. A deferred dependency can therefore be required
 at startup by a non-delayed parent, without changing its declared `lazy` value.
-This dependency-demand rule is a review choice, not timing-field inheritance.
+This dependency-demand rule is accepted in [ADR 0004](adr/0004-startup-demand.md);
+it does not inherit or rewrite timing fields. Package-group identity and
+occurrence semantics remain the separate ADR 0009 proposal.
 
 Omitted timing defaults to `lazy = false` after repeated definitions are merged.
 An explicit `lazy = true` node can still be pulled into a startup unit by
 a prerequisite demand without changing its resolved timing. Triggers alone do
 not imply deferred loading.
-Triggerless deferred inputs and runtime trigger handoff are not decided here.
-The graph identifies startup units; the separate compiler and bundle connect them to the runtime.
+A triggerless deferred target loads only on prerequisite or manual demand, as
+accepted in [ADR 0010](adr/0010-triggerless-deferred-loading.md). Public trigger
+representations and detailed handoff remain open. Manual package-path loads
+select singleton configuration, not containing groups; stable manual group
+references are not established by this timing policy. The graph identifies
+startup units; the compiler and bundle connect them to the runtime.
 
 ## External packages and validation
 
