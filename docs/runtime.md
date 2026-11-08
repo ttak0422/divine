@@ -10,8 +10,11 @@ The behavior boundaries in [design.md](design.md) still apply.
 
 `lib.compile configuration` produces a graph, a runtime plan and its Lua text.
 `lib.mkBundle { pkgs = ...; configuration = ...; }` builds a directory containing
-`init.lua`, `plan.lua`, the Lua runtime and `pack/divine/opt` symlinks. The full
-output-path hash names each symlink, so equal package display names do not collide.
+`init.lua`, `plan.lua`, the Lua runtime and `pack/divine/opt` entries. The full
+output-path hash names each entry, so equal package display names do not collide.
+Default entries link directly to package outputs. For `loadAfter = true`, a
+symlink view omits only `after/plugin` from native runtime scanning; the runtime
+sources those files explicitly from the unchanged original output.
 No package is promoted into `start`, and no external loader or wrapper is used.
 Only explicitly declared configuration dependencies are placed; a package's
 `dependencies` metadata is not interpreted as a second dependency graph. This is
@@ -25,7 +28,7 @@ recursively expands `dependencies` and
 places dependencies of opt plugins in `start` unless the same outputs are already
 in opt. An explicitly selected variant can therefore coexist with the original
 implicit dependency. Divine does not use that packaging helper. Its direct opt
-links already enforce this boundary without rebuilding or stripping packages.
+entries enforce this boundary without rebuilding or stripping package outputs.
 Neovim itself does not interpret Nix dependency attributes.
 
 This does not remove plugins injected by an independently configured Neovim
@@ -111,10 +114,12 @@ suppress Neovim's global plugin phase or claim that it can make arbitrary plugin
 scripts idempotent. The bundle fixture checks both guarded scripts and this
 unguarded native behavior explicitly. Load callbacks themselves are not repeated.
 
-The native startup `after/plugin` phase still runs. After-load configuration
-executes before that later phase. Deferred loading after startup does not source
-`after/plugin` by default. The explicit mechanism below supplements it.
-`after/ftplugin` belongs to the separate FileType path.
+The native startup `after/plugin` phase still runs for default packages and
+unmanaged runtime trees. Default configuration executes before that later phase,
+and deferred loading after startup does not source `after/plugin` by default.
+The explicit mechanism below isolates opted-in `after/plugin` files and sources
+them before configuration at either load time. `after/ftplugin` belongs to the
+separate FileType path.
 
 ## After directories
 
@@ -139,19 +144,16 @@ not conflict with `true`, but explicit `true` and `false` do.
 This registers cmp-buffer's source from its `after/plugin` script. Configure
 nvim-cmp separately as needed; this example only demonstrates loading.
 
-- **After startup:** source each opted-in member's `after/plugin/**/*.vim`, then
-  `*.lua`, in member/directory order after all ordinary unit loads and before any
-  `config` callback. Nested files are included. There is no batch source of other
-  after directories.
-- **During startup:** keep load and config synchronous and leave the native
-  after/plugin phase alone. At `VimEnter`, source only files not already recorded
-  by Neovim's source history. This also covers `--noplugin`, and packages loaded
-  by initial-buffer events or `-c` commands after native scanning has finished.
-  Config and the first triggering operation still run **before** this fallback;
-  they must not depend on after/plugin work having completed. The fallback allows
-  nested events, so commands in after scripts can emit events such as ColorScheme
-  and activate other lazy targets. `loadAfter` does not promise identical startup
-  and post-startup callback timing.
+- **Startup and deferred loading:** source each opted-in member's original
+  `after/plugin/**/*.vim`, then `*.lua`, in member/directory order after all
+  ordinary unit loads and before any `config` callback. Nested files are included.
+  The generated opt view excludes only these files from native scanning, so the
+  later startup scan does not repeat them. This same synchronous sequence applies
+  during init, initial-buffer FileType loading, `-c` commands and `--noplugin`.
+  There is no VimEnter fallback and no batch source of other after directories.
+  Config and the first-trigger handoff can depend on successful after/plugin
+  completion. Event-triggered loading allows nested events emitted by scripts;
+  the runtime's reservation and reentry guards prevent recursive unit loads.
 - **after/ftdetect:** when filetype detection is already initialized, source the
   direct `*.vim` and `*.lua` files in the native `filetypedetect` group. Otherwise,
   leave them for the later native initialization scan. This registers detection
@@ -168,19 +170,31 @@ for example `runtime/after/ftplugin/lua.lua`, `runtime/after/indent/lua.lua`, or
 `runtime/after/ftdetect/custom.vim`. These trees are present from init and follow
 native scanning; the package opt-in does not manually source their files.
 
-Canonical source paths deduplicate native startup sourcing and custom `:source`
-operations, including opt symlinks. Attempted files are not retried after partial
+Canonical source paths deduplicate earlier `:source` operations, including
+symlink aliases and native sources from independently added runtime paths.
+Attempted files are not retried after partial
 failure. Arbitrary user `dofile`, custom loader internals, explicit later
 `:runtime!` or multiple independently configured loaders are outside that
 exactly-once guarantee. As before, ordinary `plugin` scripts can be rescanned by
 Neovim during startup.
 
-An immediate after-script error fails its unit and skips config. A fallback error
-at VimEnter is reported and retained on its owning unit; its config has already
-run and is not undone. Independent fallback callbacks still run. Neovim's source
-history also records native scripts that threw: those are not retried, but history
-cannot distinguish success from failure, so divine does not claim to retain
-errors from Neovim's own scan in controller state. No rollback or reload is added.
+An after-script error fails its unit synchronously and skips its remaining
+configuration, at startup as well as after startup. The retained failure is
+re-thrown on later loads; partial effects are not undone. Independent units can
+still be loaded explicitly, but a startup load failure propagates out of setup
+rather than silently continuing the startup list. Source history cannot
+distinguish an earlier custom/native source that failed from one that succeeded,
+so divine does not claim to retain those external errors in controller state.
+
+The generated view changes the visible package layout only for opted-in outputs.
+Managed after/plugin scripts are sourced by their original output path, not their
+view path. Plugins that locate sibling files from their script filename, compare
+runtime paths, or expect their own after/plugin directory to be discoverable
+through runtimepath may need compatibility checks. Manually adding the original
+package to runtimepath, or using a custom loader that does so, bypasses isolation
+and can reintroduce native startup duplication. Do not install the same package
+through another wrapper or loader. No general plugin-compatibility guarantee is
+implied by the focused fixtures.
 
 ## Trigger handoff
 
@@ -294,8 +308,15 @@ The selected nix-unit method is recorded separately in
 proposed runtime behavior asserted by its fixtures.
 
 The after-directory checks add native startup, late `-c` and initial FileType
-loading, disabled native plugin scanning, independent fallback failures, Lua/Vim
+loading, disabled native plugin scanning, synchronous retained failures, Lua/Vim
 ordering, source aliases and filetype overrides. `checks.<system>.after-bundle`
 builds real nvim-cmp/cmp-buffer bundles and verifies exactly one buffer-source
-registration at startup and after startup, alongside runtimePaths ordering and
-after/ftdetect. This is focused coverage, not a general completion-plugin claim.
+registration inside config at startup and after startup, alongside runtimePaths
+ordering, initial-file overrides, after/ftdetect and generated-view preservation
+of other runtime assets. This is focused coverage, not a general completion-plugin claim.
+
+For overlapping explicit package groups, reentry into a different group while a
+shared package's ordinary loader is still running fails rather than reporting
+premature configuration success. Reentry into the same already-prepared unit
+retains the existing SCC behavior. Physical load failures remain sticky across
+overlapping units; ordinary configuration failures belong to their own unit.

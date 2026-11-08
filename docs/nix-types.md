@@ -24,7 +24,8 @@ is the Nixpkgs library attribute set, not divine's exported library.
 
 ```text
 Definition = {
-  plugin :: Package,
+  plugin? :: Package,
+  packages? :: [Package],
   dependPlugins? :: [Package | Definition],
   lazy? :: Bool | Null,
   ...
@@ -45,11 +46,17 @@ Configuration = {
 }
 ```
 
+Exactly one of `plugin` or `packages` is required. `packages` must be nonempty
+and contain only derivations, not nested definitions. Duplicates are deduplicated
+by output path in first-occurrence order during resolution. Recursive definitions
+belong in `dependPlugins`. `test` shorthand is invalid on a packages definition;
+use explicit `tests.<name>`.
+
 Inspection preserves a detailed `definition` unchanged and converts a package
 shorthand to `{ plugin = package; }`. Its `dependencies` are recursively inspected
 children, not package values. Trees must be finite. Inspection checks only the
-package, dependency-list structure and optional boolean-or-null `lazy`; other fields
-remain unconstrained at that stage. For resolution, every definition's optional
+package selection, dependency-list structure, optional boolean-or-null `lazy`
+and inline-test shape; most other fields remain unconstrained at that stage. For resolution, every definition's optional
 `extraPackages` must also be a package list. Missing `dependPlugins` and
 `extraPackages` act as empty lists. Named test functions are collected separately;
 other definition fields become node `settings`, and other root fields become
@@ -57,10 +64,12 @@ graph `metadata`.
 
 ## Resolved graph
 
-Node IDs are context-free output-path strings. Unit IDs are the smallest member
-ID in each SCC. Keys of `nodes` are node IDs; dependency/member/root lists contain
-IDs rather than nested nodes. Original packages retain their build context and
-derivation metadata.
+Physical node IDs are context-free output-path strings. Group configuration IDs
+are internal origin-derived strings, currently `packages:<composed-location>`;
+they are not stable public references. Unit IDs are the smallest configuration
+vertex ID in each SCC. Physical node keys remain output paths; dependencies and
+roots may identify singleton or group configurations. Original packages retain
+their build context and derivation metadata.
 
 ```text
 ResolvedNode = {
@@ -72,15 +81,25 @@ ResolvedNode = {
   extraPackages :: [Package],
   origins :: [String]
 }
+ConfigurationNode = {
+  id :: String,
+  members :: [String],
+  settings :: AttrSet,
+  dependencies :: [String],
+  extraPackages :: [Package],
+  origins :: [String]
+}
 Unit = {
   id :: String,
   members :: [String],
+  configurations :: [String],
   dependencies :: [String],
   cyclic :: Bool,
   startup :: Bool
 }
 Graph = {
   nodes :: AttrsOf ResolvedNode,
+  configurationNodes :: AttrsOf ConfigurationNode,
   units :: [Unit],
   roots :: [String],
   startupUnits :: [String],
@@ -89,6 +108,14 @@ Graph = {
   tests :: AttrsOf { run :: CheckFunction, origin :: String }
 }
 ```
+
+`configurationNodes` contains packages occurrences only; singleton settings
+remain on physical `nodes`. Group `members` are ordered physical IDs. Unit
+`members` flatten physical IDs without duplicates; `configurations` lists the
+singleton/group configuration IDs in that SCC. Each group occurrence retains
+its own settings rather than merging with other groups. Membership-only physical
+nodes do not independently seed startup demand. Explicit singleton declarations
+still use the existing field-equality merge and timing rules.
 
 `units` are ordered prerequisite-first. `startupUnits` contains unit IDs;
 `Graph.extraPackages` includes global and
@@ -107,11 +134,12 @@ may omit it or use `null` to leave timing unspecified. The resolver's conflict a
 ```text
 LuaSource = String | Path
 Conditions = String | [String]
-KeyMode = "n" | "i" | "x" | "s" | "t"
+KeyMode = "n" | "i" | "x" | "s" | "o" | "t"
 KeyInput = String | { lhs :: String, mode? :: KeyMode }
 Key = { lhs :: String, mode :: KeyMode }
 CompilationDefinition = {
-  plugin :: Package,
+  plugin? :: Package,
+  packages? :: [Package],
   dependPlugins? :: [Package | CompilationDefinition],
   extraPackages? :: [Package],
   lazy? :: Bool | Null,
@@ -159,9 +187,22 @@ PlanNode = {
   load? :: LuaInline,
   after_path? :: String
 }
-PlanUnit = { id :: String, members :: [String], dependencies :: [String] }
+PlanConfiguration = {
+  members :: [String],
+  triggers :: Triggers,
+  before? :: LuaInline,
+  after? :: LuaInline,
+  load? :: LuaInline
+}
+PlanUnit = {
+  id :: String,
+  members :: [String],
+  configurations? :: [String],
+  dependencies :: [String]
+}
 Plan = {
   nodes :: AttrsOf PlanNode,
+  configurations? :: AttrsOf PlanConfiguration,
   units :: [PlanUnit],
   startup_units :: [String],
   startup? :: LuaInline
@@ -178,9 +219,25 @@ Compiled = {
 function or a plain string. `callback` creates Lua function source inside that
 record; `lib.generators.toLua` emits it as an unquoted expression in `Compiled.lua`.
 Plan node keys remain graph node IDs, while each node's `name` is the hashed opt
-directory name. Plan units omit the graph's `cyclic` and `startup` attributes.
-`loadAfter = true` emits the original package output's `after_path`; omission or
-`false` omits it. This boolean is applied after occurrence merging.
+directory name. `Plan.configurations` contains group records when any exist;
+then each plan unit also carries its configuration IDs. A singleton configuration
+ID resolves through `Plan.nodes`. Singleton-only plans omit these extra fields.
+Plan units omit the graph's `cyclic` and `startup` attributes.
+
+`loadAfter = true` emits the original physical package output's `after_path`.
+This policy combines singleton and group declarations containing that output:
+omission is unspecified, conflicting explicit true/false values fail, and true
+applies to loads through any configuration. With no true policy the field is
+absent. The bundle hides only that opted-in package's after/plugin from the opt
+view and the runtime sources original files synchronously before configuration.
+
+Group hooks remain on their configuration records, not copied onto members.
+Physical loads are shared across the controller, but each group config runs once.
+A custom group load callback receives each not-yet-loaded member's opt name;
+the first physical load wins. Manual package-path loading and package shorthand
+dependencies target singleton config, not all containing groups. Request shared
+group config by including its full definition as a dependency; each occurrence
+still receives its own internal identity.
 Absent `runtimePaths` becomes an empty list; absent Lua source fields produce no
 corresponding callback attribute. The bundle derivation exposes the original
 resolved graph through `passthru.graph`.
@@ -228,11 +285,13 @@ arguments retain their defaults. The context values and individual check results
 are lazy. A check requesting only `pkgs` does not evaluate or build the default
 bundle or Neovim wrapper.
 
-`doc` remains in the resolved node's settings but is omitted from the runtime
-plan. Mutually exclusive `test` (one function) and `tests` (a named function map)
+`doc` remains in the resolved singleton or group configuration settings but is
+omitted from the runtime plan. Group documentation belongs to its occurrence,
+without settings-equality merging across groups. Mutually exclusive `test` (one function) and `tests` (a named function map)
 are collected separately into `Graph.tests`, with the function and
 its declaration location. A singleton is named with `lib.getName definition.plugin`;
-plural names are explicit attribute keys. Use `tests.<explicit-name>` for naming
+packages declarations reject this shorthand and require explicit plural names.
+Plural names are explicit attribute keys. Use `tests.<explicit-name>` for naming
 collisions. Names are globally unique across the finite input
 occurrences; repeated names fail even if their functions are the same value.
 Tests never enter the general settings-equality comparison. These functions are

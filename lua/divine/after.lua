@@ -4,9 +4,9 @@ local M = {}
 ---@return string
 local function canonical(path) return vim.uv.fs_realpath(path) or vim.fn.fnamemodify(path, ":p") end
 
--- Keep attempts as well as successful sources: partially executed files must
--- not be retried through a second unit or a later startup fallback.
----@type table<string, boolean>
+-- Retain failures per physical script, not per unit: overlap must rethrow a
+-- failed source without preventing unrelated successful scripts from being used.
+---@type table<string, { active: boolean, error?: string }>
 local attempted = {}
 
 ---@param paths string[] Package after directories, in unit member order.
@@ -24,9 +24,25 @@ local function source(paths, pattern)
         ipairs(vim.fn.globpath(vim.fn.escape(path, ","), pattern .. "." .. extension, true, true))
       do
         local key = canonical(file)
+        local attempt = attempted[key]
+        -- Failed sources also appear in native script history. Check the retained
+        -- failure before treating that history as evidence of a completed source.
+        if attempt and attempt.error then error(attempt.error, 0) end
+        if attempt and attempt.active then
+          error("divine: reentry while after script is still loading: " .. key, 0)
+        end
         if not seen[key] and not attempted[key] and vim.fn.filereadable(file) == 1 then
-          attempted[key] = true
-          vim.cmd.source(vim.fn.fnameescape(file))
+          attempt = { active = true }
+          attempted[key] = attempt
+          local ok, err = xpcall(
+            function() vim.cmd.source(vim.fn.fnameescape(file)) end,
+            debug.traceback
+          )
+          attempt.active = false
+          if not ok then
+            attempt.error = err
+            error(err, 0)
+          end
           -- A script may source a later sibling itself. Refresh before walking
           -- onward so custom :source work is not repeated by this pass.
           for _, script in ipairs(vim.fn.getscriptinfo()) do

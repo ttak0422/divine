@@ -183,18 +183,24 @@ let
         name: eventLookup.${lib.toLower name} or (fail "unknown onEvents event '${name}' (Neovim 0.12.4)")
       ) (conditions "onEvents" value)
     );
-  nodes = lib.mapAttrs (
-    id: node:
+  /**
+    Compile shared settings without assigning package identity.
+
+    # Type
+
+    ```
+    compileSettings :: String -> AttrSet -> AttrSet
+    ```
+  */
+  compileSettings =
+    id: settings:
     let
-      settings = node.settings;
       unknown = builtins.filter (field: !(builtins.elem field allowed)) (builtins.attrNames settings);
     in
     if unknown != [ ] then
       fail "unsupported fields for '${id}': ${lib.concatStringsSep ", " unknown}"
     else
       {
-        # An output-path hash prevents equal display names from colliding in opt.
-        name = "divine-${builtins.hashString "sha256" id}";
         triggers = {
           events = events (settings.onEvents or [ ]);
           commands = conditions "onCommands" (settings.onCommands or [ ]);
@@ -205,9 +211,19 @@ let
       }
       // lib.optionalAttrs (settings ? preConfig) { before = callback "preConfig" "" settings.preConfig; }
       // lib.optionalAttrs (settings ? config) { after = callback "config" "" settings.config; }
-      // lib.optionalAttrs (settings ? load) { load = callback "load" "name" settings.load; }
-      // lib.optionalAttrs (settings.loadAfter or false) { after_path = "${node.package}/after"; }
+      // lib.optionalAttrs (settings ? load) { load = callback "load" "name" settings.load; };
+  nodes = lib.mapAttrs (
+    id: node:
+    compileSettings id node.settings
+    // {
+      # An output-path hash prevents equal display names from colliding in opt.
+      name = "divine-${builtins.hashString "sha256" id}";
+    }
+    // lib.optionalAttrs (node.settings.loadAfter or false) { after_path = "${node.package}/after"; }
   ) graph.nodes;
+  configurations = lib.mapAttrs (
+    id: node: compileSettings id node.settings // { inherit (node) members; }
+  ) graph.configurationNodes;
   unknownRoot = builtins.attrNames (
     builtins.removeAttrs graph.metadata [
       "startupConfig"
@@ -217,9 +233,16 @@ let
   runtimePaths = graph.metadata.runtimePaths or [ ];
   plan = {
     inherit nodes;
-    units = map (unit: { inherit (unit) id members dependencies; }) graph.units;
+    units = map (
+      unit:
+      {
+        inherit (unit) id members dependencies;
+      }
+      // lib.optionalAttrs (configurations != { }) { inherit (unit) configurations; }
+    ) graph.units;
     startup_units = graph.startupUnits;
   }
+  // lib.optionalAttrs (configurations != { }) { inherit configurations; }
   // lib.optionalAttrs (graph.metadata ? startupConfig) {
     startup = callback "startupConfig" "" graph.metadata.startupConfig;
   };

@@ -29,7 +29,9 @@ let
     return require("divine").setup(dofile(root .. "/plan.lua"))
   '';
 in
-# Keep package derivations intact. Only the explicit graph controls loading;
+# Keep package derivations intact. Opted-in views hide only after/plugin from
+# native startup scanning; the plan retains its original path for explicit sourcing.
+# Only the explicit graph controls loading;
 # nixpkgs packDir would promote their implicit plugin dependencies into start.
 pkgs.runCommand "divine-bundle" { passthru = { inherit (compiled) graph; }; } ''
   mkdir -p "$out/pack/divine/opt" "$out/lua"
@@ -38,8 +40,33 @@ pkgs.runCommand "divine-bundle" { passthru = { inherit (compiled) graph; }; } ''
   cp ${initFile} "$out/init.lua"
   ${lib.concatStringsSep "\n" (
     lib.mapAttrsToList (id: node: ''
-      test -d ${lib.escapeShellArg (toString node.package)}
-      ln -s ${lib.escapeShellArg (toString node.package)} "$out/pack/divine/opt/${compiled.plan.nodes.${id}.name}"
+      package=${lib.escapeShellArg (toString node.package)}
+      target="$out/pack/divine/opt/${compiled.plan.nodes.${id}.name}"
+      test -d "$package"
+      ${
+        if compiled.plan.nodes.${id} ? after_path then
+          ''
+            mkdir -p "$target"
+            shopt -s dotglob nullglob
+            for entry in "$package"/*; do
+              name="''${entry##*/}"
+              if [ "$name" = after ] && [ -d "$entry" ]; then
+                mkdir -p "$target/after"
+                for runtime in "$entry"/*; do
+                  runtimeName="''${runtime##*/}"
+                  if [ "$runtimeName" != plugin ]; then
+                    ln -s "$runtime" "$target/after/$runtimeName"
+                  fi
+                done
+              else
+                ln -s "$entry" "$target/$name"
+              fi
+            done
+            shopt -u dotglob nullglob
+          ''
+        else
+          ''ln -s "$package" "$target"''
+      }
     '') compiled.graph.nodes
   )}
 ''

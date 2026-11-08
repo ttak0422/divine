@@ -8,7 +8,7 @@
 ---@class divine.Hooks
 ---@field before? divine.Hook
 ---@field load? divine.LoadHook Replaces ordinary packadd, not SCC preparation.
----@field after? divine.Hook Does not imply after/plugin has been sourced.
+---@field after? divine.Hook Runs after managed opt-in after/plugin.
 
 ---@class divine.Node: divine.Hooks, divine.TriggerNode
 ---@field name string Package directory name, not a Lua module name.
@@ -19,12 +19,17 @@
 ---@field id divine.UnitId
 ---@field members divine.NodeId[] Nonempty; members share one SCC load lifecycle.
 ---@field dependencies divine.UnitId[] Prerequisite units in the acyclic unit graph.
+---@field configurations? string[] Ordered singleton/group configuration identities.
 
 ---@class divine.Plan
 ---@field nodes table<divine.NodeId, divine.Node>
 ---@field units divine.Unit[]
 ---@field startup_units? divine.UnitId[]
 ---@field startup? divine.Hook Runs after non-key registration, before startup units.
+---@field configurations? table<string, divine.Configuration>
+
+---@class divine.Configuration: divine.Hooks, divine.TriggerNode
+---@field members divine.NodeId[] Ordered packages sharing these hooks.
 
 local M = {}
 
@@ -49,7 +54,7 @@ local function index_plan(plan)
   local units, node_units = {}, {}
   for _, unit in ipairs(plan.units) do
     units[unit.id] = unit
-    for _, id in ipairs(unit.members) do
+    for _, id in ipairs(unit.configurations or unit.members) do
       node_units[id] = unit.id
     end
   end
@@ -60,6 +65,11 @@ end
 ---@return divine.Controller controller
 function M.setup(plan)
   local units, node_units = index_plan(plan)
+  local definitions = vim.tbl_extend("error", {}, plan.nodes, plan.configurations or {})
+  ---@type table<divine.NodeId, boolean>, table<divine.NodeId, boolean>, table<divine.NodeId, string>
+  local prepared, loaded, package_errors = {}, {}, {}
+  ---@type table<divine.NodeId, boolean>
+  local loading = {}
   ---@class divine.Controller: divine.TriggerController
   ---@field states table<divine.UnitId, divine.UnitState>
   ---@field errors table<divine.UnitId, string> Failure messages exist only for failed units.
@@ -99,23 +109,47 @@ function M.setup(plan)
         controller.load_unit(dependency)
       end
       for _, member in ipairs(unit.members) do
-        vim.cmd.packadd({ plan.nodes[member].name, bang = true })
+        if package_errors[member] then error(package_errors[member], 0) end
+        assert(not loading[member], "divine: reentry while shared package is loading: " .. member)
+        if not prepared[member] then
+          vim.cmd.packadd({ plan.nodes[member].name, bang = true })
+          prepared[member] = true
+        end
       end
+      local configuration_ids = unit.configurations or unit.members
       if cleanup then
-        for _, member in ipairs(unit.members) do
+        for _, member in ipairs(configuration_ids) do
           cleanup(member)
         end
       end
       controller.states[id] = "configuring"
-      for _, member in ipairs(unit.members) do
-        local hook = plan.nodes[member].before
+      for _, member in ipairs(configuration_ids) do
+        local hook = definitions[member].before
         if hook then hook() end
       end
       controller.states[id] = "loading"
-      for _, member in ipairs(unit.members) do
-        local node = plan.nodes[member]
-        local load = node.load or vim.cmd.packadd
-        load(node.name)
+      for _, configuration_id in ipairs(configuration_ids) do
+        local definition = definitions[configuration_id]
+        for _, member in ipairs(definition.members or { configuration_id }) do
+          if package_errors[member] then error(package_errors[member], 0) end
+          if not loaded[member] then
+            -- A different configuration cannot finish while this physical
+            -- load is still executing. Same-unit prepared reentry returns above.
+            loading[member] = true
+            local success, message = xpcall(
+              function() (definition.load or vim.cmd.packadd)(plan.nodes[member].name) end,
+              debug.traceback
+            )
+            loading[member] = nil
+            if not success then
+              -- debug.traceback preserves non-string errors, including false.
+              -- Cache a truthy diagnostic so overlapping units cannot retry.
+              package_errors[member] = tostring(message)
+              error(package_errors[member], 0)
+            end
+            loaded[member] = true
+          end
+        end
       end
       local paths = {}
       for _, member in ipairs(unit.members) do
@@ -125,28 +159,10 @@ function M.setup(plan)
       if #paths > 0 then
         local after = require("divine.after")
         after.ftdetect(paths)
-        if vim.v.vim_did_enter == 1 then
-          after.plugins(paths)
-        else
-          -- Native startup may still source these scripts. Do not guess its
-          -- phase from vim_did_init: -c and initial FileType run before VimEnter.
-          vim.api.nvim_create_autocmd("VimEnter", {
-            once = true,
-            -- Source scripts with their normal event semantics (for example ColorScheme).
-            nested = true,
-            callback = function()
-              if controller.states[id] == "failed" then return end
-              local success, message = xpcall(function() after.plugins(paths) end, debug.traceback)
-              if not success then
-                retain_failure(id, message)
-                error(controller.errors[id], 0)
-              end
-            end,
-          })
-        end
+        after.plugins(paths)
       end
-      for _, member in ipairs(unit.members) do
-        local hook = plan.nodes[member].after
+      for _, member in ipairs(configuration_ids) do
+        local hook = definitions[member].after
         if hook then hook() end
       end
       controller.states[id] = "loaded"
@@ -165,7 +181,7 @@ function M.setup(plan)
 
   ---@type divine.Activate?
   local activate
-  cleanup, activate = require("divine.triggers").register(controller, plan.nodes)
+  cleanup, activate = require("divine.triggers").register(controller, definitions)
   if plan.startup then plan.startup() end
   for _, id in ipairs(plan.startup_units or {}) do
     controller.load_unit(id)

@@ -18,9 +18,21 @@ let
       dependencies = definition.dependPlugins or [ ];
     in
     if
-      !builtins.isAttrs definition || !(definition ? plugin) || !lib.isDerivation definition.plugin
+      !builtins.isAttrs definition
+      || (definition ? plugin) == (definition ? packages)
+      || (definition ? plugin && !lib.isDerivation definition.plugin)
+      || (
+        definition ? packages
+        && (
+          !builtins.isList definition.packages
+          || definition.packages == [ ]
+          || !lib.all lib.isDerivation definition.packages
+        )
+      )
     then
-      throw "divine prototype: expected a package or a definition containing a package"
+      throw "divine prototype: expected a package or exactly one of plugin and nonempty packages"
+    else if definition ? packages && definition ? test then
+      throw "divine prototype: packages definitions require explicitly named tests"
     else if !builtins.isList dependencies then
       throw "divine prototype: dependency definitions must be a list"
     else if definition ? lazy && definition.lazy != null && !builtins.isBool definition.lazy then
