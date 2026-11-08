@@ -54,9 +54,13 @@ occurrences, so an explicit `lazy = true` elsewhere still requests deferred
 loading without conflicting with shorthand. Conflicting explicit booleans remain
 errors. Trigger fields do not imply deferred loading; set `lazy = true` explicitly.
 A dependency with omitted timing loads at startup even when its parent is deferred.
-A lazy node without triggers is not loaded automatically unless another
-startup or triggered node needs it as a prerequisite; it also remains available
-through the returned controller's manual `load(node_id)` operation.
+Startup demand includes deferred prerequisites without rewriting their declared
+timing or opt placement, as accepted in [ADR 0004](adr/0004-startup-demand.md).
+A lazy target without triggers loads only on prerequisite or manual demand,
+including as a prerequisite of startup, triggered or manually requested targets
+([ADR 0010](adr/0010-triggerless-deferred-loading.md)). The current internal
+controller's `load(package_path)` selects singleton configuration, not groups
+containing the package. Stable public manual group references remain undecided.
 
 When updating a configuration that relied on the previous deferred default,
 add `lazy = true` to each plugin that should remain deferred, including any

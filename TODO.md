@@ -7,7 +7,8 @@ item does not mean its design has been accepted.
 
 - [ ] **API**: choose public names/schema; root and dependency definitions must keep the same recursive expressiveness.
 - [x] **DEFAULTS**: `lazy` defaults to `false` after merging repeated definitions at every dependency depth; omission and `null` leave timing unspecified until then. Triggers do not imply deferral; use explicit `lazy = true`.
-- [ ] **TRIGGER-POLICY**: review triggerless deferred loading and omitted/single/multiple trigger representations; the prototype supports prerequisite/manual loading without triggers, but these policies remain provisional.
+- [x] **TRIGGERLESS**: allow explicit deferred targets without triggers; load only on prerequisite or manual demand, without inferring deferral from trigger declarations (ADR 0010). This does not establish a stable manual group-reference API.
+- [ ] **TRIGGER-POLICY**: choose public omitted/single/multiple trigger representations, matching and handoff details; triggerless loading semantics are accepted separately in ADR 0010.
 - [x] **IDENTITY**: use output-path identity for package nodes within one resolved graph (ADR 0001); configuration-unit identity and a possible multi-package API remain separate API decisions.
 - [ ] **REPEATED-DEFINITIONS**: review/adopt or revise field equality/conflict errors, edge/tool unions and retained provenance (ADR 0002); accepting package identity does not accept these policies.
 - [x] **CYCLES**: use finite package occurrences as back-references, including cycles and self-dependencies (ADR 0001); directly cyclic Nix values remain outside the finite-input contract.
@@ -15,7 +16,7 @@ item does not mean its design has been accepted.
 - [x] **PLAN**: prototype finite graph normalization, SCC extraction and dependency-first load units, including cycles and self-dependencies.
 - [x] **EXTRACTION**: extract global, root and recursively nested extraPackages, preserving derivations and deduplicating by output path.
 - [x] **UNIT-RUNTIME**: prepare every SCC member before phased configuration; sequencing remains proposed in ADR 0005.
-- [ ] **STARTUP-DEMAND**: review the prototype's dependency-closure startup demand, which retains original timing declarations and opt placement.
+- [x] **STARTUP-DEMAND**: propagate startup demand through prerequisite units, retaining original timing declarations and opt placement (ADR 0004).
 - [x] **PACKAGING**: build opt-only trees for explicit configuration dependencies and check no start promotion.
 - [x] **GENERATION**: emit Lua callbacks from text/files and add recursive external tools and runtimePaths.
 - [x] **STARTUP**: generated init registers the runtime and loads resolved startup demand, including default startup targets, through the shared SCC path.

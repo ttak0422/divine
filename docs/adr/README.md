@@ -69,12 +69,15 @@ review. Dates describe each record's substantive update; a proposed record's dat
 is not a historical approval date. Package-node identity and finite references
 are accepted in ADR 0001. Public names, configuration-unit identity, a possible
 multi-package interface and within-unit execution are not settled by that record.
-The `lazy = false` default is specified separately in the design requirements.
+Startup prerequisite demand is accepted in ADR 0004; triggerless deferred loading
+is accepted in ADR 0010. Neither accepts public names, trigger representations
+or stable manual group references. The `lazy = false` default is specified
+separately in the design requirements.
 
 - [0001: Use output-path identity for finite package back-references](0001-output-path-identity.md) (`accepted`).
 - [0002: Combine repeated definitions with explicit conflicts](0002-repeated-definitions.md) (`proposed`).
 - [0003: Use mutual reachability for prototype SCC extraction](0003-prototype-scc-extraction.md) (`proposed`).
-- [0004: Propagate startup demand through prerequisite units](0004-startup-demand.md) (`proposed`).
+- [0004: Propagate startup demand through prerequisite units](0004-startup-demand.md) (`accepted`).
 
 - [0005: Prepare SCC runtimes before phased configuration](0005-scc-runtime-phases.md) (`proposed`).
 - [0006: Use nix-unit for Nix logic tests](0006-use-nix-unit.md) (`accepted`).
@@ -83,3 +86,5 @@ The `lazy = false` default is specified separately in the design requirements.
 - [0008: Supplement after directories through explicit opt-in](0008-opt-in-after-loading.md) (`proposed`).
 
 - [0009: Configure ordered packages as independent units](0009-ordered-package-units.md) (`proposed`).
+
+- [0010: Allow deferred targets without triggers](0010-triggerless-deferred-loading.md) (`accepted`).
