@@ -70,17 +70,23 @@
       # TODO(API): implementation scaffolding, not a stable consumer interface.
       lib = import ./lib { lib = nixpkgs.lib; };
       tests = import ./tests { lib = nixpkgs.lib; };
-      packages = eachSystem (system: {
-        example = import ./examples/telescope.nix {
+      packages = eachSystem (
+        system:
+        let
           pkgs = nixpkgs.legacyPackages.${system};
-          inherit (self) lib;
-        };
-      });
+        in
+        {
+          example = self.lib.mkBundle {
+            inherit pkgs;
+            configuration = import ./examples/example.nix { inherit pkgs; };
+          };
+        }
+      );
       checks = eachSystem (
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          exampleConfiguration = import ./examples/cartridges { inherit pkgs; };
+          exampleConfiguration = import ./examples/example.nix { inherit pkgs; };
           exampleBundle = self.packages.${system}.example;
           eventPlans = pkgs.writeText "divine-event-plans.lua" (
             "return " + import ./tests/events.nix { inherit (pkgs) lib; }
@@ -118,6 +124,7 @@
         // {
           pre-commit-check = hooksFor system;
           example =
+            assert builtins.elem (toString pkgs.vimPlugins.vim-repeat) exampleBundle.graph.roots;
             assert
               toString exampleBundle == toString (
                 self.lib.mkBundle {

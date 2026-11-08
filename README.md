@@ -19,16 +19,22 @@ uses your installed Neovim. Press `<Space>ff` for Telescope's file picker. Open 
 file inside a project, run `:ProjectRoot` to record it, then use
 `:Telescope projects` to revisit it.
 
-[`examples/telescope.nix`](examples/telescope.nix) is a thin `lib.mkBundle` entry
-point importing [the cartridges](examples/cartridges/default.nix). Telescope's
-configuration, mapping and tools live in its cartridge; project.nvim's cartridge
-enables the projects extension. The exported bundle is also used by the inline
-checks and startup smoke test.
+[`examples/example.nix`](examples/example.nix) defines the complete configuration.
+It combines the [Telescope](examples/cartridges/telescope.nix) and
+[project.nvim](examples/cartridges/project.nix) cartridges with a direct
+`pkgs.vimPlugins.vim-repeat` declaration. Simple plugins do not need cartridges.
+Common startup settings belong to the complete configuration; cartridges keep
+reusable plugin definitions, their configuration, documentation and checks.
 
-With `pkgs` and divine's `lib` bound, the same entry can be imported directly:
+The flake builds this configuration with `lib.mkBundle`. The inline checks and
+startup smoke test use the same exported bundle. With `pkgs` and divine's `lib`
+bound, build it directly as follows:
 
 ```nix
-import ./examples/telescope.nix { inherit pkgs lib; }
+lib.mkBundle {
+  inherit pkgs;
+  configuration = import ./examples/example.nix { inherit pkgs; };
+}
 ```
 
 - Declare required plugin dependencies in `dependPlugins`; divine does not use
@@ -46,7 +52,7 @@ See the [runtime guide](docs/runtime.md) for configuration fields,
 trigger syntax and loading behavior. The API is evolving, and broad third-party
 plugin compatibility has not been verified.
 
-## Keep configuration in cartridges
+## Reuse plugin definitions with cartridges
 
 Split plugin families into ordinary Nix files while keeping each plugin's Lua
 configuration, `doc` string and a single `test` function or named `tests` functions
@@ -63,7 +69,7 @@ together. Use package references for cross-file dependency edges and include eac
 Checks are Nix functions returning derivations, so they can use Python/pynvim,
 RPC, fixtures and editor restarts without adding tools to the runtime bundle.
 See the [cartridge guide](docs/cartridges.md) and
-[shared cartridges](examples/cartridges/default.nix) for this provisional API.
+[complete configuration](examples/example.nix) for this provisional API.
 
 ## Development
 

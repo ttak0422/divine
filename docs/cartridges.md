@@ -29,29 +29,40 @@ Lua configuration, documentation and check in one place:
 }
 ```
 
-Import groups in a normal `let`, pass the values needed by another group and
-include their full definitions in `configuration.plugins`:
+Cartridges contain reusable components, not the complete configuration. Compose
+them in [`examples/example.nix`](../examples/example.nix), which owns common
+startup settings and can also declare simple plugins directly:
 
 ```nix
+{ pkgs }:
 let
-  telescope = import ./telescope.nix { inherit pkgs; };
-  project = import ./project.nix { inherit pkgs telescope; };
+  telescope = import ./cartridges/telescope.nix { inherit pkgs; };
+  project = import ./cartridges/project.nix { inherit pkgs telescope; };
 in
 {
-  plugins = builtins.concatLists (map builtins.attrValues [ telescope project ]);
+  plugins = [ pkgs.vimPlugins.vim-repeat ]
+    ++ builtins.concatLists (map builtins.attrValues [ telescope project ]);
+  startupConfig = # lua
+    ''
+      vim.g.mapleader = " "
+    '';
 }
 ```
 
-The [shared configuration](../examples/cartridges/default.nix) needs only `pkgs`.
-The public `packages.<system>.example` output wraps it through
-[`examples/telescope.nix`](../examples/telescope.nix); both the inline checks and
-startup smoke test use that exported bundle. Build it with `nix build .#example`,
-then run installed Neovim with `nvim -u ./result/init.lua`.
+A cartridge is optional: package shorthand or a detailed plugin definition can
+appear directly in this configuration. The separate
+[`examples/plugins.nix`](../examples/plugins.nix) illustrates detailed declarations
+and deferred-loading policy; it is not the runnable example's configuration.
 
-To reuse the same configuration:
+The public `packages.<system>.example` output calls `lib.mkBundle` on
+`examples/example.nix`; both the inline checks and startup smoke test use that
+exported bundle. Build it with `nix build .#example`, then run installed Neovim
+with `nvim -u ./result/init.lua`.
+
+To reuse the complete configuration:
 
 ```nix
-configuration = import ./examples/cartridges { inherit pkgs; };
+configuration = import ./examples/example.nix { inherit pkgs; };
 ```
 
 The [project cartridge](../examples/cartridges/project.nix) enables the optional
