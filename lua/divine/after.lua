@@ -25,6 +25,7 @@ local function source(paths, pattern)
       do
         local key = canonical(file)
         local attempt = attempted[key]
+
         -- Failed sources also appear in native script history. Check the retained
         -- failure before treating that history as evidence of a completed source.
         if attempt and attempt.error then error(attempt.error, 0) end
@@ -43,6 +44,7 @@ local function source(paths, pattern)
             attempt.error = err
             error(err, 0)
           end
+
           -- A script may source a later sibling itself. Refresh before walking
           -- onward so custom :source work is not repeated by this pass.
           for _, script in ipairs(vim.fn.getscriptinfo()) do

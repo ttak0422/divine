@@ -30,6 +30,7 @@ local ok, err = xpcall(function()
       name == "bad" and "error('startup after fixture failed')" or "",
       emits_color and ("vim.cmd.colorscheme('divine_" .. name .. "')") or "",
     })
+
     -- Mirror the generated opt view: only managed after/plugin is absent.
     local target = root .. "/pack/divine/opt/" .. name
     vim.fn.mkdir(target, "p")
@@ -86,6 +87,7 @@ local ok, err = xpcall(function()
       vim.api.nvim_create_autocmd('ColorScheme', { pattern = 'divine_*', callback = function(args)
         local name = args.match:sub(#'divine_' + 1)
         colors[name] = (colors[name] or 0) + 1
+
         -- Reentry from an emitted event must not repeat the source or config.
         if controller then controller.load(name) end
       end })

@@ -36,6 +36,7 @@ let
       ]
     )
   );
+
   # Recursive children are evaluated individually below, never merged by the
   # module system. Derivations are opaque and retain their original metadata.
   entries = types.listOf types.attrs;
@@ -137,6 +138,7 @@ let
       description = "Additional runtime trees, as paths or packages.";
     };
   };
+
   /**
     Validate supplied fields while retaining omission and original value shapes.
 
@@ -181,6 +183,7 @@ let
           && options.${name}.type.check value.${name}
           && (name == "tests" || plain value.${name})
         ) (builtins.attrNames value);
+
       /**
         Hide a package's module discriminator in a temporary validation view.
         The returned configuration retains the original package, unchanged.
@@ -214,6 +217,7 @@ let
       supplied = lib.genAttrs names (
         name: if builtins.hasAttr name value then value.${name} else validated.${name}
       );
+
       # Force list element validation, but never traverse opaque packages or
       # arbitrary derivation attributes (including their dependencies).
       /**
@@ -239,6 +243,7 @@ let
       throw "divine input: unsupported field, invalid type or module property in configuration data"
     else
       builtins.seq evaluated.config (builtins.seq checked supplied);
+
   /**
     Validate one finite definition and recursively adapt its explicit children.
 
@@ -271,6 +276,7 @@ let
     // lib.optionalAttrs (value ? dependPlugins) {
       dependPlugins = map definition value.dependPlugins;
     };
+
   /**
     Validate compiler input while leaving identity resolution to the resolver.
 
