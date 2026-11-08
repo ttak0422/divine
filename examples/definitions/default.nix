@@ -1,22 +1,26 @@
 /**
   Compose ordinary Nix definition groups, registering each full definition once.
 
-  The caller supplies its own Goda package. The cross-group edge is illustrative,
-  not a statement that the real plugin depends on Telescope.
+  The project group enables the Telescope projects picker.
 
   # Type
 
   ```
-  import ./examples/definitions :: { pkgs :: PackageSet, packages :: { goda :: Package } } -> Configuration
+  import ./examples/definitions :: { pkgs :: PackageSet } -> Configuration
   ```
 */
-{ pkgs, packages }:
+{ pkgs }:
 let
   telescope = import ./telescope.nix { inherit pkgs; };
-  goda = import ./goda.nix { inherit packages telescope; };
+  project = import ./project.nix { inherit pkgs telescope; };
 in
 {
-  plugins = builtins.attrValues telescope ++ builtins.attrValues goda;
+  plugins = builtins.concatLists (
+    map builtins.attrValues [
+      telescope
+      project
+    ]
+  );
   startupConfig = # lua
     ''
       vim.g.mapleader = " "

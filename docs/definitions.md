@@ -35,30 +35,34 @@ include their full definitions in `configuration.plugins`:
 ```nix
 let
   telescope = import ./telescope.nix { inherit pkgs; };
-  goda = import ./goda.nix { inherit packages telescope; };
+  project = import ./project.nix { inherit pkgs telescope; };
 in
 {
-  plugins = builtins.attrValues telescope ++ builtins.attrValues goda;
+  plugins = builtins.concatLists (map builtins.attrValues [ telescope project ]);
 }
 ```
 
-Here `packages.goda` is a real derivation supplied by the caller, not an assumed
-Nixpkgs attribute. The [complete example](../examples/definitions/default.nix)
-can be imported as follows, with `myGodaPackage` bound to that derivation:
+The [complete example](../examples/definitions/default.nix) needs only `pkgs`:
 
 ```nix
-configuration = import ./examples/definitions {
-  inherit pkgs;
-  packages.goda = myGodaPackage;
-};
+configuration = import ./examples/definitions { inherit pkgs; };
 ```
 
-The [Goda group](../examples/definitions/goda.nix) declares its illustrative edge
-using `dependPlugins = [ telescope.telescope.plugin ];`. This references the
-package, while the full Telescope definition is registered once at the root.
-Resolution uses package output-path identity to combine the reference with its
-full definition, including its configuration. The Goda-to-Telescope edge is an
-example of composition, not a claim about either plugin's actual requirements.
+The [project group](../examples/definitions/project.nix) enables the optional
+Telescope projects picker and declares `dependPlugins = [ telescope.telescope.plugin ];`.
+This dependency belongs to this configuration, not to project.nvim universally.
+It ensures Telescope is configured before the project group loads its extension.
+The full Telescope definition is registered once at the root; resolution uses
+package output-path identity to combine the reference with its configuration.
+
+The example pins the original
+[ahmedkhalf/project.nvim](https://github.com/ahmedkhalf/project.nvim/tree/8c6bad7d22eef1b71144b401c9f74ed01526a4fb)
+with `buildVimPlugin` and a fixed source hash. The locked Nixpkgs attribute
+`pkgs.vimPlugins.project-nvim` currently points to a different fork with a different
+Lua API. This example uses the linked original's `require("project_nvim").setup(...)`
+and its [optional Telescope integration](https://github.com/ahmedkhalf/project.nvim/blob/8c6bad7d22eef1b71144b401c9f74ed01526a4fb/README.md#telescope-integration).
+It disables LSP detection and automatic root changes: use `:ProjectRoot` to
+record a project, then `:Telescope projects` to revisit it.
 
 A package reference does **not** import the rest of its definition. If the full
 Telescope definition is not included anywhere, its configuration, documentation
@@ -130,8 +134,11 @@ tests to a fixed Lua runner.
 For a concrete example, the Telescope group's check starts two fresh Neovim
 processes through pynvim and asserts that its picker function is available.
 That is an RPC/startup smoke test, not a picker-interaction or persistence test.
-The Goda check only verifies that the supplied package directory exists; it
-makes no claim about Goda behavior.
+The project group's check records a temporary project using `:ProjectRoot`,
+asserts it appears in history, opens the real projects picker, checks its result
+and closes it. Both imported example checks are included in the flake checks,
+with isolated HOME/XDG directories. This does not cover every picker action or
+project-history persistence across restarts.
 
 ## Export checks separately from the bundle
 

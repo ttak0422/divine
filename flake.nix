@@ -102,6 +102,10 @@
               '';
         in
         (import ./tests/definition-checks.nix { inherit pkgs; })
+        // (self.lib.mkChecks {
+          inherit pkgs;
+          configuration = import ./examples/definitions { inherit pkgs; };
+        })
         // {
           pre-commit-check = hooksFor system;
           input-eval = pkgs.runCommand "divine-nix-unit-tests" { nativeBuildInputs = [ pkgs.nix-unit ]; } ''
