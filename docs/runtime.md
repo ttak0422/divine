@@ -263,8 +263,8 @@ targets are reserved against nested event dispatch, and targets already loaded
 as dependencies or SCC peers are skipped.
 Key conflicts are checked as a batch after startup configuration, before any key
 stubs are installed. This avoids binding a stale mapleader, but means a conflict
-can be reported after startup callbacks have run. Further real-plugin event
-semantics coverage is tracked in [TODO.md](../TODO.md).
+can be reported after startup callbacks have run. Real-plugin event behavior is
+checked within the [verification scope](#verification-scope) below.
 
 BufReadPost first dispatches BufReadPre; FileType first dispatches BufReadPre
 and BufReadPost. Each supplemental event excludes its own pre-load groups and
@@ -320,3 +320,28 @@ shared package's ordinary loader is still running fails rather than reporting
 premature configuration success. Reentry into the same already-prepared unit
 retains the existing SCC behavior. Physical load failures remain sticky across
 overlapping units; ordinary configuration failures belong to their own unit.
+
+`checks.<system>.real-plugin-events` builds startup and event-deferred configurations
+from the same pinned plugins and drives fresh Neovim processes over RPC:
+
+- `vim-lastplace`: first and subsequent actual file reads restore a seeded edit
+  position through its Vimscript `BufRead` handler. Existing grouped `BufReadPre`
+  observers run only once; config is not repeated. The fixture seeds the mark
+  deterministically and does not claim ShaDa persistence testing.
+- `nvim-cmp` with `cmp-buffer`: the first `InsertEnter` prepares configured mappings;
+  typed buffer words produce candidates that are accepted through a real key.
+  Repeated insert sessions and explicit completion of an existing prefix in a new
+  buffer retain one config and one source registration. InsertLeave closes the
+  popup. These checks exercise completion behavior, not only source registration.
+
+Together with the Telescope, project.nvim and mini.pairs example/inline checks,
+these are a focused compatibility set. They do not prove arbitrary plugins, every
+event/mode combination, existing or ungrouped event-handler handoff, or universal
+equivalence to startup loading. The group exclusions above remain unchanged.
+
+For the pinned nvim-cmp, adding `InsertEnter` to `completion.autocomplete` does not
+guarantee automatic completion of unchanged existing text when cmp itself is
+first initialized on that event. Its initial completion context can already match
+the cursor state. Typing or a configured explicit completion mapping works in the
+checked flows; the new-buffer case verifies the latter. Divine does not add a
+plugin-specific reset or change event replay to hide this initialization boundary.

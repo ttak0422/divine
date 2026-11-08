@@ -168,6 +168,7 @@
             '';
           nixpkgs-dependencies = import ./tests/nixpkgs-dependencies.nix { inherit pkgs; };
           after-bundle = import ./tests/after-bundle.nix { inherit pkgs; };
+          real-plugin-events = import ./tests/real-plugin-events.nix { inherit pkgs; };
           events = eventCheck pkgs "";
           events-stable =
             eventCheck nixpkgs-stable.legacyPackages.${system}
