@@ -64,9 +64,7 @@ let
       description = "Markdown documentation, emitted separately from the runtime bundle.";
     };
     test = mkOption {
-      type = types.addCheck types.attrs (
-        value: lib.all builtins.isFunction (builtins.attrValues value)
-      );
+      type = types.addCheck types.attrs (value: lib.all builtins.isFunction (builtins.attrValues value));
       description = "Globally named check functions; each returns a derivation using pkgs, bundle or neovim.";
     };
     preConfig = mkOption {
@@ -195,9 +193,7 @@ let
           {
             # The callback map is already checked above. Keep arbitrary test
             # names (including _type) opaque to module-property interpretation.
-            config = lib.mapAttrs (
-              name: item: if name == "test" then { } else validationView item
-            ) value;
+            config = lib.mapAttrs (name: item: if name == "test" then { } else validationView item) value;
           }
         ];
       };

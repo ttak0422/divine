@@ -7,7 +7,11 @@
   import ./checks.nix :: { lib :: AttrSet, compile :: CompilationConfiguration -> Compiled, mkBundle :: AttrSet -> Derivation } -> AttrSet -> AttrsOf Derivation
   ```
 */
-{ lib, compile, mkBundle }:
+{
+  lib,
+  compile,
+  mkBundle,
+}:
 {
   pkgs,
   configuration,

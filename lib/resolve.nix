@@ -171,7 +171,8 @@ let
         else if builtins.hasAttr name state then
           fail "duplicate test '${name}' at ${state.${name}.origin} and ${occurrence.origin}"
         else
-          state // {
+          state
+          // {
             ${name} = {
               run = declared.${name};
               inherit (occurrence) origin;
@@ -365,15 +366,17 @@ let
   rootTools = packageSet "root extraPackages" extraPackages;
   tools = packageSet "extraPackages" (rootTools ++ lib.concatMap (id: nodes.${id}.extraPackages) ids);
 in
-deepSeq (attrNames tests) (deepSeq validation (
-  deepSeq (map key tools) {
-    inherit nodes units tests;
-    roots = lib.unique (map (node: key node.definition.plugin) trees);
-    startupUnits = map (unit: unit.id) (builtins.filter (unit: unit.startup) units);
-    extraPackages = tools;
-    metadata = builtins.removeAttrs request [
-      "plugins"
-      "extraPackages"
-    ];
-  }
-))
+deepSeq (attrNames tests) (
+  deepSeq validation (
+    deepSeq (map key tools) {
+      inherit nodes units tests;
+      roots = lib.unique (map (node: key node.definition.plugin) trees);
+      startupUnits = map (unit: unit.id) (builtins.filter (unit: unit.startup) units);
+      extraPackages = tools;
+      metadata = builtins.removeAttrs request [
+        "plugins"
+        "extraPackages"
+      ];
+    }
+  )
+)
