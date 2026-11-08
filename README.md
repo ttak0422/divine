@@ -22,7 +22,8 @@ file inside a project, run `:ProjectRoot` to record it, then use
 [`examples/example.nix`](examples/example.nix) defines the complete configuration.
 It combines the [Telescope](examples/cartridges/telescope.nix) and
 [project.nvim](examples/cartridges/project.nix) cartridges with a direct
-`pkgs.vimPlugins.vim-repeat` declaration. Simple plugins do not need cartridges.
+`mini.pairs` definition and inline `config`. It automatically closes parentheses
+while leaving apostrophes unpaired. Small configurations do not need cartridges.
 Common startup settings belong to the complete configuration; cartridges keep
 reusable plugin definitions, their configuration, documentation and checks.
 

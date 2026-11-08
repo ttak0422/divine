@@ -40,8 +40,15 @@ let
   project = import ./cartridges/project.nix { inherit pkgs telescope; };
 in
 {
-  plugins = [ pkgs.vimPlugins.vim-repeat ]
-    ++ builtins.concatLists (map builtins.attrValues [ telescope project ]);
+  plugins = [
+    {
+      plugin = pkgs.vimPlugins.mini-pairs;
+      config = # lua
+        ''
+          require("mini.pairs").setup({ mappings = { ["'"] = false } })
+        '';
+    }
+  ] ++ builtins.concatLists (map builtins.attrValues [ telescope project ]);
   startupConfig = # lua
     ''
       vim.g.mapleader = " "
@@ -50,7 +57,9 @@ in
 ```
 
 A cartridge is optional: package shorthand or a detailed plugin definition can
-appear directly in this configuration. The separate
+appear directly in this configuration. Here mini.pairs automatically closes
+parentheses, while the inline setting disables apostrophe pairing. The exported
+example's smoke test types both characters and checks these effects. The separate
 [`examples/plugins.nix`](../examples/plugins.nix) illustrates detailed declarations
 and deferred-loading policy; it is not the runnable example's configuration.
 

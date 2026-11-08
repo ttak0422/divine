@@ -124,7 +124,7 @@
         // {
           pre-commit-check = hooksFor system;
           example =
-            assert builtins.elem (toString pkgs.vimPlugins.vim-repeat) exampleBundle.graph.roots;
+            assert builtins.elem (toString pkgs.vimPlugins.mini-pairs) exampleBundle.graph.roots;
             assert
               toString exampleBundle == toString (
                 self.lib.mkBundle {

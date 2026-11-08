@@ -17,7 +17,13 @@ in
 {
   plugins = [
     # Simple plugins can be declared directly, without a cartridge.
-    pkgs.vimPlugins.vim-repeat
+    {
+      plugin = pkgs.vimPlugins.mini-pairs;
+      config = # lua
+        ''
+          require("mini.pairs").setup({ mappings = { ["'"] = false } })
+        '';
+    }
   ]
   ++ builtins.concatLists (
     map builtins.attrValues [
