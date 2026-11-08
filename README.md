@@ -27,6 +27,10 @@ while leaving apostrophes unpaired. Small configurations do not need cartridges.
 Common startup settings belong to the complete configuration; cartridges keep
 reusable plugin definitions, their configuration, documentation and checks.
 
+To customize the example, edit `examples/example.nix` for composition and small
+inline configurations, or `examples/cartridges/` for reusable plugin configurations.
+Then rebuild and restart your installed Neovim with the commands above.
+
 The flake builds this configuration with `lib.mkBundle`. The inline checks and
 startup smoke test use the same exported bundle. With `pkgs` and divine's `lib`
 bound, build it directly as follows:
