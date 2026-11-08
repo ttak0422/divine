@@ -1,4 +1,4 @@
-local T, case = require("tests.helpers").new_child_set("native")
+local T, case, child = require("tests.helpers").new_child_set("native")
 
 T["accepts empty trigger declarations"] = case(function(f)
   local cleanup, activate = f.triggers.register({ load = function() error("unexpected") end }, {})
@@ -325,6 +325,105 @@ T["hands off visual-mode keys"] = case(function(f)
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("viw<F15>", true, false, true), "xt", false)
   assert(count() == 1 and vim.api.nvim_get_current_line() == "WORD")
 end)
+
+T["hands off select-mode character line and block selections"] = case(function(f)
+  f.write("selectkey", "plugin/key.lua", {
+    'vim.keymap.set("s", "<F13>", function()',
+    "  _G.divine_select_context = { mode = vim.fn.mode(1),",
+    '    anchor = vim.fn.getpos("v"), cursor = vim.api.nvim_win_get_cursor(0) }',
+    '  return "replacement"',
+    "end, { expr = true })",
+  })
+  for _, selection in ipairs({ "viw<C-g>", "V<C-g>", "<C-v>jl<C-g>" }) do
+    local function run()
+      _G.divine_select_context = nil
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { "one two", "three four", "five six" })
+      vim.api.nvim_win_set_cursor(0, { 1, 0 })
+      vim.api.nvim_feedkeys(
+        vim.api.nvim_replace_termcodes(selection .. "<F13><Esc>", true, false, true),
+        "xt",
+        false
+      )
+      return {
+        context = _G.divine_select_context,
+        lines = vim.api.nvim_buf_get_lines(0, 0, -1, false),
+        cursor = vim.api.nvim_win_get_cursor(0),
+        mode = vim.fn.mode(1),
+      }
+    end
+    vim.cmd.packadd("selectkey")
+    local native = run()
+    assert(native.context ~= nil and native.lines[1]:find("replacement", 1, true))
+    vim.keymap.del("s", "<F13>")
+    local count = f.setup("selectkey", { keys = { { lhs = "<F13>", mode = "s" } } })
+    assert(vim.deep_equal(run(), native), "first selection differs: " .. selection)
+    assert(vim.deep_equal(run(), native), "loaded selection differs: " .. selection)
+    assert(count() == 1)
+    vim.keymap.del("s", "<F13>")
+  end
+end)
+
+T["hands off terminal-mode input on first and repeated keys"] = function()
+  case(function(f)
+    f.write("terminalkey", "plugin/key.lua", {
+      'vim.keymap.set("t", "<F12>", function()',
+      "  _G.divine_terminal_context = vim.fn.mode(1)",
+      '  return "terminal-input\\r"',
+      "end, { expr = true })",
+    })
+    _G.divine_terminal_setup = function(lazy)
+      local buffer = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_set_current_buf(buffer)
+      _G.divine_terminal_input, _G.divine_terminal_context = "", nil
+      local channel = vim.api.nvim_open_term(buffer, {
+        on_input = function(_, _, _, data)
+          _G.divine_terminal_input = _G.divine_terminal_input .. data
+        end,
+      })
+      vim.api.nvim_chan_send(channel, "terminal ready\r\n")
+      if lazy then
+        _G.divine_terminal_count = f.setup("terminalkey", {
+          keys = { { lhs = "<F12>", mode = "t" } },
+        })
+      else
+        vim.cmd.packadd("terminalkey")
+      end
+    end
+  end)()
+  -- Terminal input needs the child's main loop, outside a synchronous Lua RPC.
+  local function run(lazy)
+    child.lua("_G.divine_terminal_setup(...)", { lazy })
+    child.type_keys("i")
+    assert(child.lua_get("vim.fn.mode(1)") == "t")
+    local states = {}
+    for invocation = 1, 2 do
+      child.type_keys("<F12>")
+      assert(
+        vim.wait(
+          1000,
+          function()
+            return child.lua_get("_G.divine_terminal_input")
+              == string.rep("terminal-input\r", invocation)
+          end
+        ),
+        "terminal input was lost or changed"
+      )
+      states[invocation] = child.lua_get([[{
+        input = _G.divine_terminal_input,
+        context = _G.divine_terminal_context,
+        mode = vim.fn.mode(1),
+      }]])
+      assert(states[invocation].context == "t" and states[invocation].mode == "t")
+      if lazy then assert(child.lua_get("_G.divine_terminal_count()") == 1) end
+    end
+    child.type_keys([[<C-\><C-n>]])
+    assert(child.lua_get("vim.fn.mode(1)") == "nt")
+    child.lua([[vim.keymap.del("t", "<F12>"); vim.api.nvim_buf_delete(0, { force = true })]])
+    return states
+  end
+  local native = run(false)
+  assert(vim.deep_equal(run(true), native), "terminal handoff differs from native input")
+end
 
 T["hands off operator-pending keys without reconstructing operators"] = case(function(f)
   f.write("operatorkey", "plugin/key.lua", {

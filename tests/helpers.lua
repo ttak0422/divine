@@ -32,7 +32,8 @@ function M.new_child_set(kind)
       end, kind, string.dump(callback))
     end
   end
-  return T, case
+  -- Expose the driver for input that needs the child main loop between RPC calls.
+  return T, case, child
 end
 
 return M

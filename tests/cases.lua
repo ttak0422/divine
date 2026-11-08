@@ -48,6 +48,8 @@ return {
     "hands off insert-mode keys",
     "hands off normal-mode count and register on the first key",
     "hands off operator-pending keys without reconstructing operators",
+    "hands off select-mode character line and block selections",
+    "hands off terminal-mode input on first and repeated keys",
     "hands off visual-mode keys",
     "loads a command on first completion and returns plugin results",
     "loads all event targets before replaying a shared new group",

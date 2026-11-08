@@ -230,7 +230,11 @@ schema choices.
   Partial configuration effects are not rolled back. Load such targets at
   startup instead, or defer nonessential edits explicitly (deferred work runs
   after the pending operation, not before its motion).
-  Select and terminal mode coverage remains open.
+  Select-mode expression mappings preserve character, line and block selections
+  across first and repeated invocations, compared with native mappings. Terminal
+  expression mappings preserve terminal mode and deliver the same input bytes on
+  first and repeated invocations through an in-process terminal channel. This
+  verifies terminal mapping handoff, not shell or external terminal-program behavior.
 - `onModules`: exact Lua module names or dotted namespace prefixes. `foo` matches
   `foo` and `foo.bar`, not `foobar`. The existing Lua searcher chain resumes after
   preparation. Matching plugin names is never substituted for module names.
@@ -245,7 +249,7 @@ targets are reserved against nested event dispatch, and targets already loaded
 as dependencies or SCC peers are skipped.
 Key conflicts are checked as a batch after startup configuration, before any key
 stubs are installed. This avoids binding a stale mapleader, but means a conflict
-can be reported after startup callbacks have run. Further key-mode and event
+can be reported after startup callbacks have run. Further real-plugin event
 semantics coverage is tracked in [TODO.md](../TODO.md).
 
 BufReadPost first dispatches BufReadPre; FileType first dispatches BufReadPre
