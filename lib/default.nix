@@ -21,10 +21,14 @@ let
       !builtins.isAttrs definition
       || (definition ? plugin) == (definition ? packages)
       || (definition ? plugin && !lib.isDerivation definition.plugin)
-      || (definition ? packages && (
-        !builtins.isList definition.packages || definition.packages == [ ]
-        || !lib.all lib.isDerivation definition.packages
-      ))
+      || (
+        definition ? packages
+        && (
+          !builtins.isList definition.packages
+          || definition.packages == [ ]
+          || !lib.all lib.isDerivation definition.packages
+        )
+      )
     then
       throw "divine prototype: expected a package or exactly one of plugin and nonempty packages"
     else if definition ? packages && definition ? test then

@@ -20,6 +20,7 @@ suites
         "testBuildContextPreserved"
         "testConflictingAfterPolicy"
         "testExplicitDependencyLoadsBeforeGroup"
+        "testFiniteCycleContainingGroup"
         "testFiniteCycleDependency"
         "testGroupDocumentation"
         "testLazyMembersStayDeferred"

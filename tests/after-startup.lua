@@ -7,9 +7,16 @@ local function write(path, lines)
   vim.fn.writefile(vim.split(table.concat(lines, "\n"), "\n", { plain = true }), path)
 end
 local ok, err = xpcall(function()
-  for _, name in
-    ipairs({ "early", "late", "ft", "default", "native_default", "bad", "independent", "event" })
-  do
+  for _, name in ipairs({
+    "early",
+    "late",
+    "ft",
+    "default",
+    "native_default",
+    "bad",
+    "independent",
+    "event",
+  }) do
     local package = root .. "/packages/" .. name
     write(package .. "/plugin/main.lua", { "vim.g['" .. name .. "_plugin'] = true" })
     local emits_color = name == "early" or name == "late" or name == "ft"
@@ -31,7 +38,9 @@ local ok, err = xpcall(function()
         vim.fn.mkdir(target .. "/after", "p")
         for runtime in vim.fs.dir(package .. "/after") do
           if runtime ~= "plugin" then
-            assert(vim.uv.fs_symlink(package .. "/after/" .. runtime, target .. "/after/" .. runtime))
+            assert(
+              vim.uv.fs_symlink(package .. "/after/" .. runtime, target .. "/after/" .. runtime)
+            )
           end
         end
       else

@@ -262,7 +262,10 @@ let
         else if builtins.isAttrs raw && raw ? test && !builtins.isFunction raw.test then
           throw "divine input: test must be a function; use tests.<name> for named checks"
         else
-          evaluate definitionOptions [ (if raw ? packages then "packages" else "plugin") "lazy" ] raw;
+          evaluate definitionOptions [
+            (if raw ? packages then "packages" else "plugin")
+            "lazy"
+          ] raw;
     in
     value
     // lib.optionalAttrs (value ? dependPlugins) {

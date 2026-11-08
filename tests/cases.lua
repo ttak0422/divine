@@ -24,9 +24,8 @@ return {
   ["tests/runtime-plan.lua"] = {
     "isolated plan / deduplicates physical loads across independent overlapping configurations",
     "isolated plan / keeps singleton configuration separate from package group membership",
-    "isolated plan / loads ordered package groups with shared hooks and external dependencies first",
-    "isolated plan / retains shared package failures across overlapping configurations",
     "isolated plan / loads explicit startup units before activating triggers",
+    "isolated plan / loads ordered package groups with shared hooks and external dependencies first",
     "isolated plan / prepares SCC members before configuration and loads shared dependencies once",
     "isolated plan / rejects cross-group reentry before shared physical loading completes",
     "isolated plan / rejects reentry before runtime preparation",
@@ -36,6 +35,7 @@ return {
     "isolated plan / retains load failures without automatic retry",
     "isolated plan / retains packadd failures without automatic retry",
     "isolated plan / retains prerequisite and dependent failures",
+    "isolated plan / retains shared package failures across overlapping configurations",
     "isolated plan / supports an empty compiled plan",
     "isolated plan / uses the custom load hook between before and after",
     "native opt tree / hands the first command to an ordered group after shared configuration",

@@ -192,7 +192,8 @@ let
     compileSettings :: String -> AttrSet -> AttrSet
     ```
   */
-  compileSettings = id: settings:
+  compileSettings =
+    id: settings:
     let
       unknown = builtins.filter (field: !(builtins.elem field allowed)) (builtins.attrNames settings);
     in
@@ -210,16 +211,18 @@ let
       }
       // lib.optionalAttrs (settings ? preConfig) { before = callback "preConfig" "" settings.preConfig; }
       // lib.optionalAttrs (settings ? config) { after = callback "config" "" settings.config; }
-      // lib.optionalAttrs (settings ? load) { load = callback "load" "name" settings.load; }
-      ;
-  nodes = lib.mapAttrs (id: node:
-    compileSettings id node.settings // {
+      // lib.optionalAttrs (settings ? load) { load = callback "load" "name" settings.load; };
+  nodes = lib.mapAttrs (
+    id: node:
+    compileSettings id node.settings
+    // {
       # An output-path hash prevents equal display names from colliding in opt.
       name = "divine-${builtins.hashString "sha256" id}";
-    } // lib.optionalAttrs (node.settings.loadAfter or false) { after_path = "${node.package}/after"; }
+    }
+    // lib.optionalAttrs (node.settings.loadAfter or false) { after_path = "${node.package}/after"; }
   ) graph.nodes;
-  configurations = lib.mapAttrs (id: node:
-    compileSettings id node.settings // { inherit (node) members; }
+  configurations = lib.mapAttrs (
+    id: node: compileSettings id node.settings // { inherit (node) members; }
   ) graph.configurationNodes;
   unknownRoot = builtins.attrNames (
     builtins.removeAttrs graph.metadata [
@@ -230,7 +233,11 @@ let
   runtimePaths = graph.metadata.runtimePaths or [ ];
   plan = {
     inherit nodes;
-    units = map (unit: { inherit (unit) id members dependencies; }
+    units = map (
+      unit:
+      {
+        inherit (unit) id members dependencies;
+      }
       // lib.optionalAttrs (configurations != { }) { inherit (unit) configurations; }
     ) graph.units;
     startup_units = graph.startupUnits;

@@ -263,7 +263,10 @@ function M.register(controller, nodes)
       if not entry then
         -- One dispatcher per event also preserves fail-fast behavior: Neovim
         -- continues other autocmd callbacks after reporting a Lua error.
-        entry = { handle = vim.api.nvim_create_autocmd(event, { callback = on_event, nested = true }), count = 0 }
+        entry = {
+          handle = vim.api.nvim_create_autocmd(event, { callback = on_event, nested = true }),
+          count = 0,
+        }
         event_handles[event] = entry
       end
       entry.count = entry.count + 1

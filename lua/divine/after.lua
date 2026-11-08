@@ -34,9 +34,10 @@ local function source(paths, pattern)
         if not seen[key] and not attempted[key] and vim.fn.filereadable(file) == 1 then
           attempt = { active = true }
           attempted[key] = attempt
-          local ok, err = xpcall(function()
-            vim.cmd.source(vim.fn.fnameescape(file))
-          end, debug.traceback)
+          local ok, err = xpcall(
+            function() vim.cmd.source(vim.fn.fnameescape(file)) end,
+            debug.traceback
+          )
           attempt.active = false
           if not ok then
             attempt.error = err

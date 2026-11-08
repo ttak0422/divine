@@ -168,52 +168,65 @@ mocked["supports an empty compiled plan"] = case(function(f)
   f.equal("register,activate")
 end)
 
-mocked["loads ordered package groups with shared hooks and external dependencies first"] = case(function(f)
-  local plan = {
-    nodes = { a = { name = "a" }, b = { name = "b" }, dep = { name = "dep" } },
-    configurations = {
-      group = {
-        members = { "b", "a" },
-        before = function()
-          assert(f.prepared.a and f.prepared.b)
-          f.record("before:group")
-        end,
-        after = function() f.record("after:group") end,
+mocked["loads ordered package groups with shared hooks and external dependencies first"] = case(
+  function(f)
+    local plan = {
+      nodes = { a = { name = "a" }, b = { name = "b" }, dep = { name = "dep" } },
+      configurations = {
+        group = {
+          members = { "b", "a" },
+          before = function()
+            assert(f.prepared.a and f.prepared.b)
+            f.record("before:group")
+          end,
+          after = function() f.record("after:group") end,
+        },
       },
-    },
-    units = {
-      { id = "dep", members = { "dep" }, dependencies = {} },
-      { id = "group", members = { "b", "a" }, configurations = { "group" }, dependencies = { "dep" } },
-    },
-  }
-  local controller = f.runtime.setup(plan)
-  f.trace = {}
-  controller.load("group")
-  f.equal("prepare:dep,cleanup:dep,load:dep,prepare:b,prepare:a,cleanup:group,before:group,load:b,load:a,after:group")
-  f.trace = {}
-  controller.load("group")
-  f.equal("")
-end)
+      units = {
+        { id = "dep", members = { "dep" }, dependencies = {} },
+        {
+          id = "group",
+          members = { "b", "a" },
+          configurations = { "group" },
+          dependencies = { "dep" },
+        },
+      },
+    }
+    local controller = f.runtime.setup(plan)
+    f.trace = {}
+    controller.load("group")
+    f.equal(
+      "prepare:dep,cleanup:dep,load:dep,prepare:b,prepare:a,cleanup:group,before:group,load:b,load:a,after:group"
+    )
+    f.trace = {}
+    controller.load("group")
+    f.equal("")
+  end
+)
 
-mocked["deduplicates physical loads across independent overlapping configurations"] = case(function(f)
-  local controller = f.runtime.setup({
-    nodes = { a = { name = "a" }, b = { name = "b" }, c = { name = "c" } },
-    configurations = {
-      first = { members = { "b", "a" }, after = function() f.record("config:first") end },
-      second = { members = { "b", "c" }, after = function() f.record("config:second") end },
-    },
-    units = {
-      { id = "first", members = { "b", "a" }, configurations = { "first" }, dependencies = {} },
-      { id = "second", members = { "b", "c" }, configurations = { "second" }, dependencies = {} },
-    },
-  })
-  f.trace = {}
-  controller.load("first")
-  controller.load("second")
-  controller.load("first")
-  controller.load("second")
-  f.equal("prepare:b,prepare:a,cleanup:first,load:b,load:a,config:first,prepare:c,cleanup:second,load:c,config:second")
-end)
+mocked["deduplicates physical loads across independent overlapping configurations"] = case(
+  function(f)
+    local controller = f.runtime.setup({
+      nodes = { a = { name = "a" }, b = { name = "b" }, c = { name = "c" } },
+      configurations = {
+        first = { members = { "b", "a" }, after = function() f.record("config:first") end },
+        second = { members = { "b", "c" }, after = function() f.record("config:second") end },
+      },
+      units = {
+        { id = "first", members = { "b", "a" }, configurations = { "first" }, dependencies = {} },
+        { id = "second", members = { "b", "c" }, configurations = { "second" }, dependencies = {} },
+      },
+    })
+    f.trace = {}
+    controller.load("first")
+    controller.load("second")
+    controller.load("first")
+    controller.load("second")
+    f.equal(
+      "prepare:b,prepare:a,cleanup:first,load:b,load:a,config:first,prepare:c,cleanup:second,load:c,config:second"
+    )
+  end
+)
 
 mocked["retains shared package failures across overlapping configurations"] = case(function(f)
   local attempts = 0
@@ -317,53 +330,55 @@ native["prepares peer modules before SCC callbacks without sourcing after-plugin
   end
 )
 
-native["hands the first command to an ordered group after shared configuration"] = native_case(function(f)
-  f.write("group-b", "lua/divine_group_peer.lua", { "return { ready = true }" })
-  f.write("group-b", "plugin/main.lua", {
-    "vim.g.divine_group_order = (vim.g.divine_group_order or '') .. 'b,'",
-    "vim.api.nvim_create_user_command('DivineOrderedGroup', function()",
-    "  assert(vim.g.divine_group_config == 1)",
-    "  vim.g.divine_group_calls = (vim.g.divine_group_calls or 0) + 1",
-    "end, {})",
-  })
-  f.write("group-a", "plugin/main.lua", {
-    "assert(vim.g.divine_group_order == 'b,')",
-    "vim.g.divine_group_order = vim.g.divine_group_order .. 'a,'",
-  })
-  for _, name in ipairs({ "a", "b" }) do
-    f.write("group-" .. name, "after/plugin/main.lua", {
-      "vim.g.divine_group_order = vim.g.divine_group_order .. 'after-" .. name .. ",'",
+native["hands the first command to an ordered group after shared configuration"] = native_case(
+  function(f)
+    f.write("group-b", "lua/divine_group_peer.lua", { "return { ready = true }" })
+    f.write("group-b", "plugin/main.lua", {
+      "vim.g.divine_group_order = (vim.g.divine_group_order or '') .. 'b,'",
+      "vim.api.nvim_create_user_command('DivineOrderedGroup', function()",
+      "  assert(vim.g.divine_group_config == 1)",
+      "  vim.g.divine_group_calls = (vim.g.divine_group_calls or 0) + 1",
+      "end, {})",
     })
-  end
-  local controller = require("divine").setup({
-    nodes = {
-      a = { name = "group-a", after_path = f.root .. "/pack/divine/opt/group-a/after" },
-      b = { name = "group-b", after_path = f.root .. "/pack/divine/opt/group-b/after" },
-    },
-    configurations = {
-      group = {
-        members = { "b", "a" },
-        triggers = { commands = { "DivineOrderedGroup" } },
-        before = function()
-          assert(require("divine_group_peer").ready)
-          assert(vim.g.divine_group_order == nil)
-          vim.g.divine_group_pre = (vim.g.divine_group_pre or 0) + 1
-        end,
-        after = function()
-          assert(vim.g.divine_group_order == "b,a,after-b,after-a,")
-          vim.g.divine_group_config = (vim.g.divine_group_config or 0) + 1
-        end,
+    f.write("group-a", "plugin/main.lua", {
+      "assert(vim.g.divine_group_order == 'b,')",
+      "vim.g.divine_group_order = vim.g.divine_group_order .. 'a,'",
+    })
+    for _, name in ipairs({ "a", "b" }) do
+      f.write("group-" .. name, "after/plugin/main.lua", {
+        "vim.g.divine_group_order = vim.g.divine_group_order .. 'after-" .. name .. ",'",
+      })
+    end
+    local controller = require("divine").setup({
+      nodes = {
+        a = { name = "group-a", after_path = f.root .. "/pack/divine/opt/group-a/after" },
+        b = { name = "group-b", after_path = f.root .. "/pack/divine/opt/group-b/after" },
       },
-    },
-    units = {
-      { id = "group", members = { "b", "a" }, configurations = { "group" }, dependencies = {} },
-    },
-  })
-  vim.cmd.DivineOrderedGroup()
-  vim.cmd.DivineOrderedGroup()
-  controller.load("group")
-  assert(vim.g.divine_group_pre == 1 and vim.g.divine_group_config == 1)
-  assert(vim.g.divine_group_calls == 2)
-end)
+      configurations = {
+        group = {
+          members = { "b", "a" },
+          triggers = { commands = { "DivineOrderedGroup" } },
+          before = function()
+            assert(require("divine_group_peer").ready)
+            assert(vim.g.divine_group_order == nil)
+            vim.g.divine_group_pre = (vim.g.divine_group_pre or 0) + 1
+          end,
+          after = function()
+            assert(vim.g.divine_group_order == "b,a,after-b,after-a,")
+            vim.g.divine_group_config = (vim.g.divine_group_config or 0) + 1
+          end,
+        },
+      },
+      units = {
+        { id = "group", members = { "b", "a" }, configurations = { "group" }, dependencies = {} },
+      },
+    })
+    vim.cmd.DivineOrderedGroup()
+    vim.cmd.DivineOrderedGroup()
+    controller.load("group")
+    assert(vim.g.divine_group_pre == 1 and vim.g.divine_group_config == 1)
+    assert(vim.g.divine_group_calls == 2)
+  end
+)
 
 return T

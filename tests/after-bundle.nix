@@ -44,7 +44,10 @@ let
               '';
           }
           {
-            packages = [ pkgs.vimPlugins.nvim-cmp pkgs.vimPlugins.cmp-buffer ];
+            packages = [
+              pkgs.vimPlugins.nvim-cmp
+              pkgs.vimPlugins.cmp-buffer
+            ];
             inherit lazy;
             loadAfter = true;
             config = # lua
@@ -88,7 +91,12 @@ let
             assert(vim.bo.filetype == "divinefixture", "first file must be detected")
             assert(vim.b.divine_fixture_ftplugin and vim.b.divine_fixture_syntax)
             assert(vim.bo.shiftwidth == 7)
-            assert(count() == ${if lazy then "0" else "1"})
+            ${
+              if lazy then
+                "assert(package.loaded.cmp == nil and not vim.g.divine_cmp_config)"
+              else
+                "assert(count() == 1)"
+            }
             controller.load("packages:plugins[1]")
             assert(count() == 1 and vim.g.divine_cmp_config)
             controller.load("packages:plugins[1]")

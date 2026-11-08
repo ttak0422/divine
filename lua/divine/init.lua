@@ -136,9 +136,10 @@ function M.setup(plan)
             -- A different configuration cannot finish while this physical
             -- load is still executing. Same-unit prepared reentry returns above.
             loading[member] = true
-            local success, message = xpcall(function()
-              (definition.load or vim.cmd.packadd)(plan.nodes[member].name)
-            end, debug.traceback)
+            local success, message = xpcall(
+              function() (definition.load or vim.cmd.packadd)(plan.nodes[member].name) end,
+              debug.traceback
+            )
             loading[member] = nil
             if not success then
               package_errors[member] = message
