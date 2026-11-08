@@ -148,8 +148,10 @@ nvim-cmp separately as needed; this example only demonstrates loading.
   by Neovim's source history. This also covers `--noplugin`, and packages loaded
   by initial-buffer events or `-c` commands after native scanning has finished.
   Config and the first triggering operation still run **before** this fallback;
-  they must not depend on after/plugin work having completed. `loadAfter` does
-  not promise identical startup and post-startup callback timing.
+  they must not depend on after/plugin work having completed. The fallback allows
+  nested events, so commands in after scripts can emit events such as ColorScheme
+  and activate other lazy targets. `loadAfter` does not promise identical startup
+  and post-startup callback timing.
 - **after/ftdetect:** when filetype detection is already initialized, source the
   direct `*.vim` and `*.lua` files in the native `filetypedetect` group. Otherwise,
   leave them for the later native initialization scan. This registers detection

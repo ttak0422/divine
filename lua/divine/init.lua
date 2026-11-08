@@ -132,6 +132,8 @@ function M.setup(plan)
           -- phase from vim_did_init: -c and initial FileType run before VimEnter.
           vim.api.nvim_create_autocmd("VimEnter", {
             once = true,
+            -- Source scripts with their normal event semantics (for example ColorScheme).
+            nested = true,
             callback = function()
               if controller.states[id] == "failed" then return end
               local success, message = xpcall(function() after.plugins(paths) end, debug.traceback)
