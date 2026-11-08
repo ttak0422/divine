@@ -64,6 +64,10 @@ let
       description = "Markdown documentation, emitted separately from the runtime bundle.";
     };
     test = mkOption {
+      type = types.addCheck types.anything builtins.isFunction;
+      description = "One check function, named from the plugin package with lib.getName.";
+    };
+    tests = mkOption {
       type = types.addCheck types.attrs (value: lib.all builtins.isFunction (builtins.attrValues value));
       description = "Globally named check functions; each returns a derivation using pkgs, bundle or neovim.";
     };
@@ -167,7 +171,7 @@ let
           name:
           builtins.hasAttr name options
           && options.${name}.type.check value.${name}
-          && (name == "test" || plain value.${name})
+          && (name == "tests" || plain value.${name})
         ) (builtins.attrNames value);
       /**
         Hide a package's module discriminator in a temporary validation view.
@@ -193,7 +197,7 @@ let
           {
             # The callback map is already checked above. Keep arbitrary test
             # names (including _type) opaque to module-property interpretation.
-            config = lib.mapAttrs (name: item: if name == "test" then { } else validationView item) value;
+            config = lib.mapAttrs (name: item: if name == "tests" then { } else validationView item) value;
           }
         ];
       };
@@ -243,10 +247,13 @@ let
         if lib.isDerivation entry then { plugin = entry; } else entry
       );
     in
-    value
-    // lib.optionalAttrs (value ? dependPlugins) {
-      dependPlugins = map definition value.dependPlugins;
-    };
+    if value ? test && value ? tests then
+      throw "divine input: a definition cannot contain both test and tests"
+    else
+      value
+      // lib.optionalAttrs (value ? dependPlugins) {
+        dependPlugins = map definition value.dependPlugins;
+      };
   /**
     Validate compiler input while leaving identity resolution to the resolver.
 

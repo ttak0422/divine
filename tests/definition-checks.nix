@@ -16,7 +16,7 @@ let
         ''
           vim.keymap.set("i", "jj", "<Esc>")
         '';
-      test = {
+      tests = {
         inline-package =
           { pkgs }:
           pkgs.runCommand "inline-package-check" { } ''

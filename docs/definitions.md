@@ -21,7 +21,7 @@ Lua configuration, documentation and check in one place:
         require("telescope").setup({})
       '';
     doc = "Use :Telescope find_files to find files.";
-    test.telescope-package = { pkgs }: pkgs.runCommand "telescope-package" { } ''
+    test = { pkgs }: pkgs.runCommand "telescope-package" { } ''
       test -d ${pkgs.vimPlugins.telescope-nvim}
       touch "$out"
     '';
@@ -94,16 +94,30 @@ for the equality rule, including Nix string context.
 
 ## Inline checks are Nix functions
 
-`test` is an attribute set of named Nix functions, not Lua snippets and not a
-single implicit test. Each function returns a derivation. Keep tests next to the
-definition they describe; an imported group can naturally use this shape:
+Use `test = { pkgs, ... }: ...` for one check, or `tests.foo = ...` and
+`tests.bar = ...` for several named checks. Each function returns a derivation,
+not a Lua snippet. A definition cannot contain both `test` and `tests`, even
+when `tests` is empty. Keep checks next to the definition they describe:
+
+```nix
+{
+  plugin = packages.example;
+  tests.package = { pkgs }: pkgs.runCommand "package-check" { } "touch $out";
+  tests.runtime = { pkgs, neovim }: pkgs.runCommand "runtime-check" { } ''
+    ${neovim}/bin/nvim --headless -c 'qa!'
+    touch "$out"
+  '';
+}
+```
+
+For a single check, an imported group can use:
 
 ```nix
 {
   skk = {
     plugin = packages.skk;
     doc = "The configured SKK input method.";
-    test.skk-input = { pkgs, neovim }:
+    test = { pkgs, neovim }:
       let
         python = pkgs.python3.withPackages (ps: [ ps.pynvim ]);
       in
@@ -157,8 +171,12 @@ in
 
 In a flake, put these package and check attributes beneath the relevant system,
 for example `checks.${system} = lib.mkChecks { inherit pkgs configuration; };`.
-`mkChecks` returns a flat attribute set of derivations keyed by the declared test
-names, suitable for `nix flake check`. Defining a check does not execute it;
+`mkChecks` returns a flat attribute set of derivations suitable for `nix flake
+check`. Plural `tests` uses the declared attribute names. Singular `test` uses
+`lib.getName definition.plugin`, which uses `pname` when available or removes
+the version suffix from `name`. Nix local group binding names are not available. In the complete example the
+actual check names are `project.nvim` and `telescope.nvim`.
+Defining a check does not execute it;
 building the check derivation runs it.
 
 The provisional call is:
@@ -187,9 +205,11 @@ intended configuration itself.
 
 Test names must be globally unique across **all included definitions**, at roots
 and dependency depths. They are not prefixed by the local Nix binding (`skk` in
-`skk.test.skk-input`). Every duplicate name errors, including a duplicate on the
-same package or the same function value registered twice. Use descriptive names
-such as `skk-input` and `skk-restart`; use package references for shared edges.
+`skk.tests.skk-input`). Every duplicate name errors, including a duplicate on the
+same package or the same function value registered twice. Singleton names also
+collide with named tests and with other singleton packages of the same name.
+Use `tests.<explicit-name>` with unique names such as `skk-input` and
+`skk-restart` to resolve collisions; use package references for shared edges.
 
 Documentation and test functions are build-time metadata. They do not appear in
 the generated Lua runtime plan. Python, pynvim and other check-only tools belong

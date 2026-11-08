@@ -30,7 +30,7 @@ in
       (checks [
         {
           plugin = a;
-          test.package = check;
+          tests.package = check;
         }
       ]).package.outPath;
     expected = a.outPath;
@@ -40,7 +40,7 @@ in
       (checks [
         {
           plugin = a;
-          test.package =
+          tests.package =
             {
               pkgs,
               other ? true,
@@ -60,7 +60,7 @@ in
         configuration.plugins = [
           {
             plugin = a;
-            test.context =
+            tests.context =
               { bundle, neovim }:
               assert bundle.outPath == a.outPath;
               neovim;
@@ -74,7 +74,7 @@ in
       (checks [
         {
           plugin = a;
-          test._type = check;
+          tests._type = check;
         }
       ])._type.outPath;
     expected = a.outPath;
@@ -87,11 +87,11 @@ in
     expr = builtins.attrNames (checks [
       {
         plugin = a;
-        test.outer = check;
+        tests.outer = check;
         dependPlugins = [
           {
             plugin = b;
-            test.inner = check;
+            tests.inner = check;
           }
         ];
       }
@@ -105,11 +105,11 @@ in
     expr = builtins.attrNames (checks [
       {
         plugin = a;
-        test.first = check;
+        tests.first = check;
       }
       {
         plugin = a;
-        test.second = check;
+        tests.second = check;
       }
     ]);
     expected = [
@@ -120,41 +120,41 @@ in
   testDuplicateSameFunction = invalid [
     {
       plugin = a;
-      test.same = check;
+      tests.same = check;
     }
     {
       plugin = a;
-      test.same = check;
+      tests.same = check;
     }
   ];
   testDuplicateDifferentFunctions = invalid [
     {
       plugin = a;
-      test.same = check;
+      tests.same = check;
     }
     {
       plugin = a;
-      test.same = _: b;
+      tests.same = _: b;
     }
   ];
   testDuplicateAcrossPackages = invalid [
     {
       plugin = a;
-      test.same = check;
+      tests.same = check;
     }
     {
       plugin = b;
-      test.same = check;
+      tests.same = check;
     }
   ];
   testDuplicateNested = invalid [
     {
       plugin = a;
-      test.same = check;
+      tests.same = check;
       dependPlugins = [
         {
           plugin = b;
-          test.same = check;
+          tests.same = check;
         }
       ];
     }
@@ -162,19 +162,19 @@ in
   testRejectNonFunction = invalid [
     {
       plugin = a;
-      test.bad = a;
+      tests.bad = a;
     }
   ];
   testRejectNonSet = invalid [
     {
       plugin = a;
-      test = check;
+      tests = check;
     }
   ];
   testRejectEmptyName = invalid [
     {
       plugin = a;
-      test."" = check;
+      tests."" = check;
     }
   ];
   testRejectNonDerivation = {
@@ -182,7 +182,7 @@ in
       (checks [
         {
           plugin = a;
-          test.bad = _: "not a check";
+          tests.bad = _: "not a check";
         }
       ]).bad;
     expectedError.type = "ThrownError";
@@ -194,7 +194,7 @@ in
           {
             plugin = a;
             doc = "Only documentation";
-            test.broken = _: throw "not invoked";
+            tests.broken = _: throw "not invoked";
           }
         ];
       }).lua == (api.compile { plugins = [ a ]; }).lua;
@@ -204,7 +204,7 @@ in
     expr = builtins.attrNames (checks [
       {
         plugin = a;
-        test.once = check;
+        tests.once = check;
       }
       {
         plugin = b;
@@ -220,12 +220,12 @@ in
           first = {
             plugin = a;
             dependPlugins = [ groups.second.plugin ];
-            test.first = check;
+            tests.first = check;
           };
           second = {
             plugin = b;
             dependPlugins = [ groups.first.plugin ];
-            test.second = check;
+            tests.second = check;
           };
         };
         result = api.compile { plugins = builtins.attrValues groups; };
@@ -290,7 +290,7 @@ in
     expr =
       (api.compile {
         plugins = [ a ];
-        test.bad = check;
+        tests.bad = check;
       }).lua;
     expectedError.type = "ThrownError";
   };
@@ -299,7 +299,7 @@ in
       (checks [
         {
           plugin = a;
-          test = {
+          tests = {
             selected = check;
             unselected = _: throw "not selected";
           };
@@ -314,7 +314,7 @@ in
         {
           plugin = a;
           doc = "Inline prose";
-          test.broken = _: throw "not invoked";
+          tests.broken = _: throw "not invoked";
         }
       ];
     };
@@ -326,14 +326,174 @@ in
         plugins = [
           {
             plugin = a;
-            test.same = check;
+            tests.same = check;
           }
           {
             plugin = a;
-            test.same = check;
+            tests.same = check;
           }
         ];
       }).extraPackages;
+    expectedError.type = "ThrownError";
+  };
+  testSingletonPackageCheck = {
+    expr =
+      (checks [
+        {
+          plugin = a;
+          test = check;
+        }
+      ]).a.outPath;
+    expected = a.outPath;
+  };
+  testSingletonPackageName = {
+    expr = builtins.attrNames (checks [
+      {
+        plugin = a // {
+          name = "example-1.2.3";
+        };
+        test = check;
+      }
+    ]);
+    expected = [ "example" ];
+  };
+  testNestedSingleton = {
+    expr = builtins.attrNames (checks [
+      {
+        plugin = a;
+        dependPlugins = [
+          {
+            plugin = b;
+            test = check;
+          }
+        ];
+      }
+    ]);
+    expected = [ "b" ];
+  };
+  testDuplicateSingleton = invalid [
+    {
+      plugin = a;
+      test = check;
+    }
+    {
+      plugin = a;
+      test = check;
+    }
+  ];
+  testSingletonNamedCollision = invalid [
+    {
+      plugin = a;
+      test = check;
+    }
+    {
+      plugin = b;
+      tests.a = check;
+    }
+  ];
+  testNamedSingletonCollision = invalid [
+    {
+      plugin = b;
+      tests.a = check;
+    }
+    {
+      plugin = a;
+      test = check;
+    }
+  ];
+  testBothForms = invalid [
+    {
+      plugin = a;
+      test = check;
+      tests.named = check;
+    }
+  ];
+  testBothFormsEmptyPlural = invalid [
+    {
+      plugin = a;
+      test = check;
+      tests = { };
+    }
+  ];
+  testRejectSingletonMap = invalid [
+    {
+      plugin = a;
+      test.named = check;
+    }
+  ];
+  testRejectSingletonDerivation = invalid [
+    {
+      plugin = a;
+      test = b;
+    }
+  ];
+  testSingletonValuesRemainLazy = {
+    expr =
+      (checks [
+        {
+          plugin = a;
+          test = check;
+        }
+        {
+          plugin = b;
+          test = _: throw "not selected";
+        }
+      ]).a.outPath;
+    expected = a.outPath;
+  };
+  testRuntimeDoesNotRunSingleton = {
+    expr =
+      (api.compile {
+        plugins = [
+          {
+            plugin = a;
+            test = _: throw "not invoked";
+          }
+        ];
+      }).lua == (api.compile { plugins = [ a ]; }).lua;
+    expected = true;
+  };
+  testSingletonNonDerivation = {
+    expr =
+      (checks [
+        {
+          plugin = a;
+          test = _: "not a derivation";
+        }
+      ]).a;
+    expectedError.type = "ThrownError";
+  };
+  testCompileRejectBothForms = {
+    expr =
+      (api.compile {
+        plugins = [
+          {
+            plugin = a;
+            test = check;
+            tests = { };
+          }
+        ];
+      }).lua;
+    expectedError.type = "ThrownError";
+  };
+  testCompileRejectSingletonMap = {
+    expr =
+      (api.compile {
+        plugins = [
+          {
+            plugin = a;
+            test.named = check;
+          }
+        ];
+      }).lua;
+    expectedError.type = "ThrownError";
+  };
+  testRejectRootSingleton = {
+    expr =
+      (api.compile {
+        plugins = [ a ];
+        test = check;
+      }).lua;
     expectedError.type = "ThrownError";
   };
 }

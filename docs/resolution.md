@@ -63,9 +63,12 @@ not an acceptance of the provisional identity or timing policies below.
   with the package and both input locations. String equality includes Nix build
   context. Nested attribute values must be equal, not recursively merged.
   Functions or other values that cannot be compared are not silently chosen.
-- **Inline tests:** `test` maps globally unique names to check functions. Collect
+- **Inline tests:** `test` is one check function, named with `lib.getName` of the
+  plugin package; `tests` maps explicit names to functions. Reject both forms on
+  one definition, including an empty `tests` map. Collect
   functions separately from settings, retaining their declaration locations.
-  Duplicate names error across all occurrences, even for the same package or
+  Names are globally unique; collisions require `tests.<explicit-name>` with unique
+  names. Duplicates error across all occurrences, even for the same package or
   function. Function bodies are not evaluated during resolution. Use package
   references for shared edges so a full definition owns its tests once.
 - **Inline docs:** `doc` follows the existing settings-equality rule. Equal

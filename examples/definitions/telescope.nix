@@ -24,7 +24,7 @@
       Telescope provides interactive pickers. Run `:Telescope find_files` to
       search files. This configuration loads Telescope at startup.
     '';
-    test.telescope-rpc =
+    test =
       { pkgs, neovim }:
       let
         python = pkgs.python3.withPackages (ps: [ ps.pynvim ]);

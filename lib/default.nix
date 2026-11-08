@@ -25,6 +25,18 @@ let
       throw "divine prototype: dependency definitions must be a list"
     else if definition ? lazy && definition.lazy != null && !builtins.isBool definition.lazy then
       throw "divine prototype: an explicit load-timing flag must be boolean or null"
+    else if definition ? test && definition ? tests then
+      throw "divine prototype: a definition cannot contain both test and tests"
+    else if definition ? test && !builtins.isFunction definition.test then
+      throw "divine prototype: test must be a function returning a derivation"
+    else if
+      definition ? tests
+      && (
+        !builtins.isAttrs definition.tests
+        || !lib.all builtins.isFunction (builtins.attrValues definition.tests)
+      )
+    then
+      throw "divine prototype: tests must be an attribute set of functions"
     else
       {
         inherit definition;

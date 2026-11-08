@@ -37,7 +37,7 @@
       revisit it. This configuration uses pattern-based root detection and
       explicitly enables the optional Telescope integration.
     '';
-    test.project-telescope =
+    test =
       {
         pkgs,
         neovim,
@@ -69,7 +69,7 @@
       in
       assert pkgs.lib.any (
         node:
-        node.package.pname == "project.nvim"
+        (node.package.pname or "") == "project.nvim"
         && builtins.elem (toString telescope.telescope.plugin) node.dependencies
       ) (builtins.attrValues bundle.graph.nodes);
       pkgs.runCommand "project-telescope" { } ''

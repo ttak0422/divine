@@ -159,17 +159,24 @@ let
   tests = foldl' (
     acc: occurrence:
     let
-      declared = occurrence.definition.test or { };
+      definition = occurrence.definition;
+      declared =
+        if definition ? test then
+          {
+            ${lib.getName definition.plugin} = definition.test;
+          }
+        else
+          definition.tests or { };
     in
     if !builtins.isAttrs declared || !lib.all builtins.isFunction (builtins.attrValues declared) then
-      fail "test at ${occurrence.origin} must be an attribute set of functions"
+      fail "tests at ${occurrence.origin} must be an attribute set of functions"
     else
       foldl' (
         state: name:
         if name == "" then
           fail "test names at ${occurrence.origin} must be nonempty"
         else if builtins.hasAttr name state then
-          fail "duplicate test '${name}' at ${state.${name}.origin} and ${occurrence.origin}"
+          fail "duplicate test '${name}' at ${state.${name}.origin} and ${occurrence.origin}; use tests.<explicit-name> with unique names"
         else
           state
           // {
@@ -205,6 +212,7 @@ let
               "dependPlugins"
               "extraPackages"
               "test"
+              "tests"
             ]
           );
         in

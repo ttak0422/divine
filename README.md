@@ -55,7 +55,7 @@ plugin compatibility has not been verified.
 ## Keep definitions together
 
 Split plugin families into ordinary Nix files while keeping each plugin's Lua
-configuration, `doc` string and named `test` functions together. Use package
+configuration, `doc` string and a single `test` function or named `tests` functions together. Use package
 references for cross-file dependency edges and include each full definition once.
 
 ```nix

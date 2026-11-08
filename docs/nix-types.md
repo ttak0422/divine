@@ -124,7 +124,8 @@ CompilationDefinition = {
   onKeys? :: KeyInput | [KeyInput],
   onModules? :: Conditions,
   doc? :: String,
-  test? :: AttrsOf CheckFunction
+  test? :: CheckFunction
+  tests? :: AttrsOf CheckFunction
 }
 CompilationConfiguration = {
   plugins :: [Package | CompilationDefinition],
@@ -224,8 +225,11 @@ are lazy. A check requesting only `pkgs` does not evaluate or build the default
 bundle or Neovim wrapper.
 
 `doc` remains in the resolved node's settings but is omitted from the runtime
-plan. `test` is collected separately into `Graph.tests`, with the function and
-its declaration location. Names are globally unique across the finite input
+plan. Mutually exclusive `test` (one function) and `tests` (a named function map)
+are collected separately into `Graph.tests`, with the function and
+its declaration location. A singleton is named with `lib.getName definition.plugin`;
+plural names are explicit attribute keys. Use `tests.<explicit-name>` for naming
+collisions. Names are globally unique across the finite input
 occurrences; repeated names fail even if their functions are the same value.
 Tests never enter the general settings-equality comparison. These functions are
 not invoked by resolution, compilation, bundle construction or documentation.
