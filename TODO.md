@@ -19,7 +19,7 @@ item does not mean its design has been accepted.
 - [x] **PACKAGING**: build opt-only trees for explicit configuration dependencies and check no start promotion.
 - [x] **GENERATION**: emit Lua callbacks from text/files and add recursive external tools and runtimePaths.
 - [x] **STARTUP**: generated init registers the runtime and loads resolved startup demand, including default startup targets, through the shared SCC path.
-- [ ] **EVENT**: native group replay covers API/Vimscript once and script context; broaden real-plugin event compatibility beyond isolated fixtures.
+- [x] **EVENT**: native group replay has API/Vimscript once/context fixtures plus real vim-lastplace first-read cursor restoration and nvim-cmp first-InsertEnter mapping/completion checks; existing-group exclusions and first-event limitations remain documented.
 - [x] **COMMAND**: native command stubs and invocation/completion handoff; see runtime fixtures for verified argument forms.
 - [x] **FILETYPE**: match current/new buffers and handle new ftplugin/after-ftplugin separately.
 - [x] **KEY**: key operation replay covers normal-mode count/register, insert/visual operations, native-parity select character/line/block selections and terminal input on first/repeated keys; operator-pending keys retain native state with a textlock-bound load.
@@ -33,7 +33,7 @@ item does not mean its design has been accepted.
 - [x] **TEST-METHOD**: adopt pinned nix-unit with named cases, expected errors, case-discovery and failure-injection guards; legacy default runner replaced.
 - [x] **LUA-TEST-METHOD**: use pinned test-only mini.test, named cases with fresh child state, explicit case discovery and nonzero-failure/cleanup guards.
 - [x] **NIXPKGS-DEPENDENCIES**: ignore implicit plugin metadata without rewriting derivations; cover two real text-object plugins, a selected shared dependency and nested tools.
-- [ ] **REAL-PLUGINS**: broaden third-party coverage beyond the text-object dependency regression and synthetic opt fixtures.
+- [x] **REAL-PLUGINS**: focused checks cover text-object dependencies/operations, Telescope/project.nvim/mini.pairs behavior, cmp-buffer registration, and startup/deferred vim-lastplace and nvim-cmp event-driven behavior; see docs/runtime.md for the exact scope and limitations.
 
 ## Fixed boundaries
 
