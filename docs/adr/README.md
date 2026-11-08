@@ -64,12 +64,14 @@ requirements or the status of unresolved decisions.
 
 ## Records
 
-These first records capture existing prototype choices for review. Their dates
-record this documentation pass, not historical design approval. They do not
-settle public names, trigger defaults or within-unit execution. The `lazy = false`
-default is specified separately in the design requirements.
+These records distinguish accepted decisions from prototype choices still under
+review. Dates describe each record's substantive update; a proposed record's date
+is not a historical approval date. Package-node identity and finite references
+are accepted in ADR 0001. Public names, configuration-unit identity, a possible
+multi-package interface and within-unit execution are not settled by that record.
+The `lazy = false` default is specified separately in the design requirements.
 
-- [0001: Use output-path identity for finite back-references](0001-output-path-identity.md) (`proposed`).
+- [0001: Use output-path identity for finite package back-references](0001-output-path-identity.md) (`accepted`).
 - [0002: Combine repeated definitions with explicit conflicts](0002-repeated-definitions.md) (`proposed`).
 - [0003: Use mutual reachability for prototype SCC extraction](0003-prototype-scc-extraction.md) (`proposed`).
 - [0004: Propagate startup demand through prerequisite units](0004-startup-demand.md) (`proposed`).

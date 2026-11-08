@@ -44,7 +44,7 @@ let
     key :: Package -> String
     ```
   */
-  # Provisional identity, not a final consumer API: see docs/resolution.md.
+  # Accepted package-node identity, not configuration-unit identity: see ADR 0001.
   # IDs must be context-free; original package values retain their build dependencies.
   key = package: builtins.unsafeDiscardStringContext (toString package);
   /**
