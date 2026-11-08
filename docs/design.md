@@ -146,14 +146,22 @@ On the Nix side, normalize package shorthand into a form shared with detailed
 definitions, validate nested dependencies and construct a graph. Do not replace
 this with a restriction that prevents detailed definitions inside dependencies.
 
-For repeated occurrences of the same package, the identity criterion, settings
-merge policy and handling of conflicting load timing or configuration remain
-undecided. The example includes `vim-repeat` twice, but does not specify silent
-merging or discarding of occurrences.
+Within one resolved package graph, identify package nodes by output path. Repeated
+occurrences of one output refer to the same node; distinct outputs remain distinct
+even when their display names match. A package occurrence can refer to a detailed
+definition elsewhere in the same finite input, allowing cycles and self-references
+without an additional package-reference field. Detailed definitions and recursive
+dependencies remain valid at every depth. See [ADR 0001](adr/0001-output-path-identity.md).
 
-Treat each SCC, including cycles, as one load unit. Cycles in the dependency graph
-are distinct from evaluation of directly cyclic Nix values. The input
-representation of cycles and a finite normalization method remain undecided.
+This package-node rule does not select the identity or schema of reusable
+configuration units, including a possible interface grouping multiple packages.
+The settings merge policy and handling of conflicting timing or configuration
+remain undecided. The example's repeated `vim-repeat` identifies one package node
+but does not imply that settings are silently merged or discarded.
+
+Treat each SCC, including cycles, as one load unit. Finite inputs may describe
+cyclic graphs; directly cyclic Nix values are outside this input contract. The
+SCC extraction algorithm and within-unit sequencing remain separate review choices.
 
 ### Placement and configuration timing
 

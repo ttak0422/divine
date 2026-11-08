@@ -1,6 +1,6 @@
 ---
 status: proposed
-date: 2026-11-07
+date: 2026-11-08
 discussion: "https://github.com/ttak0422/divine/pull/1"
 ---
 
@@ -33,7 +33,7 @@ Nested attribute values must be equal rather than recursively merged. Conflicts
 report the field, package and both input locations; incomparable values are not
 silently selected. Lua text, trigger lists and arbitrary settings are not
 concatenated. Edges and tools are deduplicated by the
-[proposed output-path identity](0001-output-path-identity.md) and sorted by path.
+[accepted package output-path identity](0001-output-path-identity.md) and sorted by path.
 All occurrence locations remain in `origins`.
 
 ### Consequences
@@ -49,5 +49,6 @@ All occurrence locations remain in `origins`.
 Implemented in [lib/resolve.nix](../../lib/resolve.nix), with repeated-definition,
 conflict, string-context and recursive-tool fixtures in
 [tests/resolver.nix](../../tests/resolver.nix). Implementation is not acceptance.
-Review the merge/equality policy and its interaction with the identity choice
-before treating it as a public contract.
+Review the merge/equality policy and its interaction with the accepted package
+identity before treating it as a public contract. ADR 0001 does not accept this
+record's field equality, conflict, edge/tool-union or provenance policies.

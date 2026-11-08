@@ -8,8 +8,9 @@ item does not mean its design has been accepted.
 - [ ] **API**: choose public names/schema; root and dependency definitions must keep the same recursive expressiveness.
 - [x] **DEFAULTS**: `lazy` defaults to `false` after merging repeated definitions at every dependency depth; omission and `null` leave timing unspecified until then. Triggers do not imply deferral; use explicit `lazy = true`.
 - [ ] **TRIGGER-POLICY**: review triggerless deferred loading and omitted/single/multiple trigger representations; the prototype supports prerequisite/manual loading without triggers, but these policies remain provisional.
-- [ ] **IDENTITY**: review/adopt or revise the prototype's output-path identity, field equality/conflict errors, edge/tool unions and retained provenance; see docs/resolution.md.
-- [ ] **CYCLES**: review/adopt or revise finite back-references through package identity; directly cyclic Nix values remain distinct from finite cyclic graphs.
+- [x] **IDENTITY**: use output-path identity for package nodes within one resolved graph (ADR 0001); configuration-unit identity and a possible multi-package API remain separate API decisions.
+- [ ] **REPEATED-DEFINITIONS**: review/adopt or revise field equality/conflict errors, edge/tool unions and retained provenance (ADR 0002); accepting package identity does not accept these policies.
+- [x] **CYCLES**: use finite package occurrences as back-references, including cycles and self-dependencies (ADR 0001); directly cyclic Nix values remain outside the finite-input contract.
 - [x] **INPUT-SCHEMA**: validate compiler inputs with mkOption types/descriptions and nullable timing before the existing resolver; public module API and generated documentation remain separate.
 - [x] **PLAN**: prototype finite graph normalization, SCC extraction and dependency-first load units, including cycles and self-dependencies.
 - [x] **EXTRACTION**: extract global, root and recursively nested extraPackages, preserving derivations and deduplicating by output path.

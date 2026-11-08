@@ -2,15 +2,18 @@
 
 This implements finite dependency graphs, SCC load units, dependency-first DAG
 ordering, and external-package extraction. The compiler now turns a graph with startup loading by default into an executable Lua load plan; see [runtime.md](runtime.md).
-Names and the following choices are provisional review decisions, not final API
-or design requirements. Runtime sequencing and trigger handoff have their own proposed implementation boundaries.
+Package-node identity and finite package references are accepted in ADR 0001.
+Public names, configuration-unit identity and the other policies described below
+remain provisional. Runtime sequencing and trigger handoff have their own proposed
+implementation boundaries.
 
 Review status and reasoning are also indexed in the [ADRs](adr/README.md):
 [identity and finite references](adr/0001-output-path-identity.md),
 [repeated definitions](adr/0002-repeated-definitions.md),
 [SCC extraction](adr/0003-prototype-scc-extraction.md), and
-[startup demand](adr/0004-startup-demand.md). All four remain `proposed`; the
-implementation described below does not establish design acceptance.
+[startup demand](adr/0004-startup-demand.md). ADR 0001 is `accepted`; ADRs 0002,
+0003 and 0004 remain `proposed`. Existing implementations and passing tests do not
+by themselves establish design acceptance.
 
 ## Input and finite cycles
 
@@ -34,8 +37,9 @@ With `a` and `b` bound to package derivations, this is a finite input for a cycl
 The package occurrences refer to nodes declared elsewhere in the same input.
 This needs no additional reference field and does not construct an infinitely
 recursive Nix value. Both detailed definitions and deeper nested dependencies
-remain valid. Directly cyclic Nix values are still outside this evaluator's
-finite input; an alternative reference/identity API remains open for review.
+remain valid. Directly cyclic Nix values are outside the finite-input contract.
+This package-level identity/reference rule does not select the identity, grouping
+or schema of reusable configuration units or a possible multi-package interface.
 
 ## Explicit versus package dependencies
 
@@ -45,13 +49,14 @@ when the package is shorthand or an explicitly declared dependency. Original
 package values and their Nix dependency context are retained unchanged. The
 resolver does not remove build inputs, propagated inputs or package metadata.
 This loading boundary is a requirement in [design.md](design.md#package-dependency-metadata),
-not an acceptance of the provisional identity or timing policies below.
+not an acceptance of the provisional repeated-definition or timing policies below.
 
 ## Identity and repeated definitions
 
-- **Identity:** the package's output path, not its display name. Distinct output
-  paths remain distinct even if their names match. An explicit configuration ID
-  is an alternative if multiple configurations of the same output are needed.
+- **Identity (accepted):** the package's output path, not its display name, within
+  one resolved graph. Distinct outputs remain distinct even if their names match.
+  Configuration-unit identity, including any explicit ID for grouping or configuring
+  packages, remains a separate API question.
 - **Shorthand:** contributes a package occurrence without supplying any timing
   or configuration defaults. A detailed occurrence of that package can supply
   those fields elsewhere in the graph. After merging, omitted `lazy` defaults
@@ -80,9 +85,11 @@ not an acceptance of the provisional identity or timing policies below.
   package value represents an identity; its Nix build context is retained.
   Only identifiers discard string context so they can be used safely as keys.
 
-This makes sharing and finite back-references useful immediately, while keeping
-ambiguous settings explicit errors. Alternative identity, merge and conflict
-policies need review; this prototype must not become the final policy by accident.
+Package identity and finite back-references are accepted independently of the
+remaining policies in this section. Field equality, conflicts, edge/tool unions
+and retained provenance remain the ADR 0002 proposal. Public names and any
+configuration-unit or multi-package API also remain open; they are not accepted
+as a side effect of the package-node decision.
 
 ## SCCs and DAG order
 
