@@ -84,7 +84,8 @@ Graph = {
   roots :: [String],
   startupUnits :: [String],
   extraPackages :: [Package],
-  metadata :: AttrSet
+  metadata :: AttrSet,
+  tests :: AttrsOf { run :: CheckFunction, origin :: String }
 }
 ```
 
@@ -120,7 +121,9 @@ CompilationDefinition = {
   onCommands? :: Conditions,
   onFiletypes? :: Conditions,
   onKeys? :: KeyInput | [KeyInput],
-  onModules? :: Conditions
+  onModules? :: Conditions,
+  doc? :: String,
+  test? :: AttrsOf CheckFunction
 }
 CompilationConfiguration = {
   plugins :: [Package | CompilationDefinition],
@@ -187,8 +190,9 @@ single-mode restriction, and runtime trees accept paths or packages.
 
 `lazy` uses `types.nullOr types.bool` with `default = null`. The adapter
 materializes this safe sentinel, but does not insert empty trigger lists into
-individual occurrences. The resolver explicitly ignores only null `lazy`
-values, compares the remaining supplied fields, and applies `true` afterward.
+individual occurrences. The resolver explicitly ignores null `lazy`
+values, compares the remaining runtime/documentation fields, and applies `false` afterward.
+Named tests are collected separately without comparing function values.
 `nullOr` alone does not provide this merge policy. Explicit true/false conflicts
 still fail in either order; null is not accepted as omission for other fields.
 
@@ -208,3 +212,31 @@ provisional. Generated option documentation remains future work.
 Event declarations accept native aliases and case variants. Compilation maps them
 to unique Neovim 0.12.4 callback spellings; runtime plan event strings are canonical.
 Unknown names fail during compilation, including for startup-loaded nodes.
+
+## Inline documentation and checks
+
+`CheckFunction` is a named-argument Nix function returning a derivation. Its
+arguments are selected from `{ pkgs :: PackageSet, bundle :: Derivation,
+neovim :: Derivation }`; unused arguments may be omitted, and other optional
+arguments retain their defaults. The context values and individual check results
+are lazy. A check requesting only `pkgs` does not evaluate or build the default
+bundle or Neovim wrapper.
+
+`doc` remains in the resolved node's settings but is omitted from the runtime
+plan. `test` is collected separately into `Graph.tests`, with the function and
+its declaration location. Names are globally unique across the finite input
+occurrences; repeated names fail even if their functions are the same value.
+Tests never enter the general settings-equality comparison. These functions are
+not invoked by resolution, compilation, bundle construction or documentation.
+
+`mkChecks` returns a flat `AttrsOf Derivation`, suitable for flake checks, and
+rejects a selected function that returns a non-derivation. Its optional `bundle`
+and `neovim` arguments allow an existing runtime to be reused. The default
+wrapper provides `bin/nvim` using `pkgs.neovim-unwrapped` and the bundle's
+`init.lua`; an explicitly supplied wrapper owns its startup configuration.
+
+`mkDocs` returns a Markdown derivation with package identities, declaration
+locations and inline documentation. Locations identify entries in the composed
+configuration, not original source-file line numbers. Both builders remain
+separate from `mkBundle`; none of their outputs or test-only inputs are linked
+into the runtime tree. See [the definition guide](definitions.md).

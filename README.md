@@ -52,6 +52,25 @@ See the [runtime guide](docs/runtime.md) for configuration fields,
 trigger syntax and loading behavior. The API is evolving, and broad third-party
 plugin compatibility has not been verified.
 
+## Keep definitions together
+
+Split plugin families into ordinary Nix files while keeping each plugin's Lua
+configuration, `doc` string and named `test` functions together. Use package
+references for cross-file dependency edges and include each full definition once.
+
+```nix
+{
+  bundle = lib.mkBundle { inherit pkgs configuration; };
+  documentation = lib.mkDocs { inherit pkgs configuration; };
+  checks = lib.mkChecks { inherit pkgs configuration; };
+}
+```
+
+Checks are Nix functions returning derivations, so they can use Python/pynvim,
+RPC, fixtures and editor restarts without adding tools to the runtime bundle.
+See the [definition guide](docs/definitions.md) and
+[grouped example](examples/definitions/default.nix) for this provisional API.
+
 ## Development
 
 ```sh
@@ -74,6 +93,7 @@ See [ADR 0006](docs/adr/0006-use-nix-unit.md) and
 ## Documentation
 
 - [Design requirements](docs/design.md)
+- [Inline definitions, documentation and checks](docs/definitions.md)
 - [Dependency resolution](docs/resolution.md)
 - [Nix type reference](docs/nix-types.md)
 - [Architecture decisions](docs/adr/README.md)

@@ -167,7 +167,9 @@ let
         builtins.isAttrs value
         && lib.all (
           name:
-          builtins.hasAttr name options && options.${name}.type.check value.${name} && plain value.${name}
+          builtins.hasAttr name options
+          && options.${name}.type.check value.${name}
+          && (name == "test" || plain value.${name})
         ) (builtins.attrNames value);
       /**
         Hide a package's module discriminator in a temporary validation view.
@@ -190,7 +192,13 @@ let
       evaluated = lib.evalModules {
         modules = [
           { inherit options; }
-          { config = lib.mapAttrs (_: validationView) value; }
+          {
+            # The callback map is already checked above. Keep arbitrary test
+            # names (including _type) opaque to module-property interpretation.
+            config = lib.mapAttrs (
+              name: item: if name == "test" then { } else validationView item
+            ) value;
+          }
         ];
       };
       names = lib.unique (required ++ builtins.attrNames value);

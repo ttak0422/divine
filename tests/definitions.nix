@@ -46,6 +46,10 @@ in
     }).context.outPath;
     expected = b.outPath;
   };
+  testModuleDiscriminatorAsName = {
+    expr = (checks [ { plugin = a; test._type = check; } ])._type.outPath;
+    expected = a.outPath;
+  };
   testEmptyChecks = {
     expr = builtins.attrNames (checks [ a ]);
     expected = [ ];

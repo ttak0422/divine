@@ -27,6 +27,7 @@ suites
         "testDuplicateSameFunction"
         "testEmptyChecks"
         "testFiniteCrossFileCycle"
+        "testModuleDiscriminatorAsName"
         "testNamedPackageCheck"
         "testNestedCollection"
         "testOptionalContext"

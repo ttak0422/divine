@@ -63,6 +63,13 @@ not an acceptance of the provisional identity or timing policies below.
   with the package and both input locations. String equality includes Nix build
   context. Nested attribute values must be equal, not recursively merged.
   Functions or other values that cannot be compared are not silently chosen.
+- **Inline tests:** `test` maps globally unique names to check functions. Collect
+  functions separately from settings, retaining their declaration locations.
+  Duplicate names error across all occurrences, even for the same package or
+  function. Function bodies are not evaluated during resolution. Use package
+  references for shared edges so a full definition owns its tests once.
+- **Inline docs:** `doc` follows the existing settings-equality rule. Equal
+  strings merge; conflicting strings error. It is omitted from the Lua plan.
 - **Edges and tools:** dependency edges and external packages form unions,
   deduplicated by output path and sorted by path. Lua text, trigger lists, and
   arbitrary settings are never concatenated as a guessed merge policy.
@@ -114,7 +121,7 @@ inferred plugin API or a replacement for Nix's own build dependency closure.
 Malformed input and conflicting metadata error before a caller can extract a
 partial tool list and overlook an invalid graph. The output contains `nodes`,
 ordered `units`, `roots`, `startupUnits`, `extraPackages` and
-root `metadata`; these names are internal prototype structure.
+root `metadata` and collected `tests`; these names are internal prototype structure.
 
 Pure evaluation tests cover shorthand, detailed/nested input, diamonds, sharing,
 dependency-first order, cycles, self-dependencies, repeated and conflicting
