@@ -396,17 +396,19 @@ in
           }
         ];
       in
-      lib.all (
-        entries:
-        (resolve { plugins = entries; }).nodes.${id a}.settings == {
-          lazy = false;
-          preConfig = "prepare()";
-          config = "configure()";
-        }
-      ) [
-        declarations
-        (lib.reverseList declarations)
-      ];
+      lib.all
+        (
+          entries:
+          (resolve { plugins = entries; }).nodes.${id a}.settings == {
+            lazy = false;
+            preConfig = "prepare()";
+            config = "configure()";
+          }
+        )
+        [
+          declarations
+          (lib.reverseList declarations)
+        ];
     expected = true;
   };
   testRepeatedOccurrenceLocations = {
@@ -438,8 +440,12 @@ in
   testRepeatedFirstPackageAndTool = {
     expr =
       let
-        firstPackage = contextual // { marker = "first package"; };
-        firstTool = toolRoot // { marker = "first tool"; };
+        firstPackage = contextual // {
+          marker = "first package";
+        };
+        firstTool = toolRoot // {
+          marker = "first tool";
+        };
         result = resolve {
           extraPackages = [ firstTool ];
           plugins = [
@@ -479,29 +485,31 @@ in
           }
         ];
       in
-      lib.all (
-        entries:
-        let
-          result = resolve { plugins = entries; };
-        in
-        result.nodes.${id a}.dependencies == map id [
-          b
-          c
-        ]
-        &&
-          map id result.nodes.${id a}.extraPackages == map id [
-            toolDep
-            toolRoot
+      lib.all
+        (
+          entries:
+          let
+            result = resolve { plugins = entries; };
+          in
+          result.nodes.${id a}.dependencies == map id [
+            b
+            c
           ]
-        &&
-          map id result.extraPackages == map id [
-            toolDep
-            toolRoot
-          ]
-      ) [
-        declarations
-        (lib.reverseList declarations)
-      ];
+          &&
+            map id result.nodes.${id a}.extraPackages == map id [
+              toolDep
+              toolRoot
+            ]
+          &&
+            map id result.extraPackages == map id [
+              toolDep
+              toolRoot
+            ]
+        )
+        [
+          declarations
+          (lib.reverseList declarations)
+        ];
     expected = true;
   };
   testNoRecursiveSettingsMerge = {
@@ -509,25 +517,23 @@ in
     expectedError.type = "ThrownError";
   };
   testConflictReportsBothLocations = {
-    expr = builtins.deepSeq (
-      resolve {
-        plugins = [
-          {
-            plugin = b;
-            dependPlugins = [
-              {
-                plugin = a;
-                config = "first()";
-              }
-            ];
-          }
-          {
-            plugin = a;
-            config = "second()";
-          }
-        ];
-      }
-    ) true;
+    expr = builtins.deepSeq (resolve {
+      plugins = [
+        {
+          plugin = b;
+          dependPlugins = [
+            {
+              plugin = a;
+              config = "first()";
+            }
+          ];
+        }
+        {
+          plugin = a;
+          config = "second()";
+        }
+      ];
+    }) true;
     expectedError = {
       type = "ThrownError";
       msg = "divine resolver: conflicting field 'config' for '${id a}' at plugins\\[0\\]\\.dependPlugins\\[0\\] and plugins\\[1\\]";
