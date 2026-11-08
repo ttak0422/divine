@@ -7,7 +7,7 @@ Declare a Neovim configuration in Nix and load plugins with a small Lua runtime.
 `lib.mkBundle` builds a directory containing `init.lua`, the runtime and plugins
 in `pack/divine/opt`. Plugins load at startup by default.
 
-With `pkgs` and divine's `lib` bound:
+The [Telescope example](examples/telescope.nix) uses divine's `lib` and `pkgs`:
 
 ```nix
 lib.mkBundle {
@@ -25,7 +25,10 @@ lib.mkBundle {
           '';
       }
     ];
-    extraPackages = [ pkgs.ripgrep pkgs.fd ];
+    extraPackages = [
+      pkgs.ripgrep
+      pkgs.fd
+    ];
     startupConfig = # lua
       ''
         vim.g.mapleader = " "
@@ -35,7 +38,16 @@ lib.mkBundle {
 }
 ```
 
-Run Neovim with `nvim -u /path/to/bundle/init.lua`.
+From the repository root, build this example and launch your installed Neovim:
+
+```sh
+nix build .#example
+nvim -u ./result/init.lua
+```
+
+Press `<Space>ff` or run `:Telescope find_files` to open the file picker.
+The bundle supplies plugins and command-line tools, not a Neovim executable.
+Edit `examples/telescope.nix` and rebuild to try your own configuration.
 
 - Declare required plugin dependencies in `dependPlugins`; divine does not use
   nixpkgs plugin `dependencies` to populate the bundle or determine loading.

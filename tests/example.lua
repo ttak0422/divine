@@ -1,0 +1,8 @@
+assert(vim.fn.exists(":Telescope") == 2)
+assert(vim.g.mapleader == " ")
+assert(vim.fn.executable("rg") == 1)
+assert(vim.fn.executable("fd") == 1)
+assert(vim.fn.maparg("<Space>ff", "n"):find("Telescope find_files", 1, true))
+require("telescope.builtin").find_files({ cwd = vim.fn.getcwd() })
+assert(require("telescope.actions.state").get_current_picker(vim.api.nvim_get_current_buf()))
+print("PASS: example init, tools, mapping, and Telescope file picker")

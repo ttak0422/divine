@@ -70,6 +70,12 @@
       # TODO(API): implementation scaffolding, not a stable consumer interface.
       lib = import ./lib { lib = nixpkgs.lib; };
       tests = import ./tests { lib = nixpkgs.lib; };
+      packages = eachSystem (system: {
+        example = import ./examples/telescope.nix {
+          pkgs = nixpkgs.legacyPackages.${system};
+          inherit (self) lib;
+        };
+      });
       checks = eachSystem (
         system:
         let
@@ -103,6 +109,13 @@
         in
         {
           pre-commit-check = hooksFor system;
+          example = pkgs.runCommand "divine-example-test" { nativeBuildInputs = [ pkgs.neovim ]; } ''
+            export HOME="$TMPDIR/home"
+            mkdir -p "$HOME"
+            nvim --headless -n -i NONE -u ${self.packages.${system}.example}/init.lua \
+              -l ${./tests/example.lua}
+            touch "$out"
+          '';
           input-eval = pkgs.runCommand "divine-nix-unit-tests" { nativeBuildInputs = [ pkgs.nix-unit ]; } ''
             export HOME="$TMPDIR/home"
             mkdir -p "$HOME"
