@@ -496,4 +496,33 @@ in
       }).lua;
     expectedError.type = "ThrownError";
   };
+  testSingletonCollisionAcrossOutputs = invalid [
+    {
+      plugin = a;
+      test = check;
+    }
+    {
+      plugin = b // {
+        name = a.name;
+      };
+      test = check;
+    }
+  ];
+  testSeparateOccurrenceForms = {
+    expr = builtins.attrNames (checks [
+      {
+        plugin = a;
+        test = check;
+      }
+      {
+        plugin = a;
+        tests.explicit = check;
+      }
+    ]);
+    expected = [
+      "a"
+      "explicit"
+    ];
+  };
+
 }

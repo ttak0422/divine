@@ -243,17 +243,19 @@ let
   definition =
     entry:
     let
-      value = evaluate definitionOptions [ "plugin" "lazy" ] (
-        if lib.isDerivation entry then { plugin = entry; } else entry
-      );
+      raw = if lib.isDerivation entry then { plugin = entry; } else entry;
+      value =
+        if builtins.isAttrs raw && raw ? test && raw ? tests then
+          throw "divine input: a definition cannot contain both test and tests"
+        else if builtins.isAttrs raw && raw ? test && !builtins.isFunction raw.test then
+          throw "divine input: test must be a function; use tests.<name> for named checks"
+        else
+          evaluate definitionOptions [ "plugin" "lazy" ] raw;
     in
-    if value ? test && value ? tests then
-      throw "divine input: a definition cannot contain both test and tests"
-    else
-      value
-      // lib.optionalAttrs (value ? dependPlugins) {
-        dependPlugins = map definition value.dependPlugins;
-      };
+    value
+    // lib.optionalAttrs (value ? dependPlugins) {
+      dependPlugins = map definition value.dependPlugins;
+    };
   /**
     Validate compiler input while leaving identity resolution to the resolver.
 

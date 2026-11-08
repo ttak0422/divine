@@ -28,7 +28,7 @@ let
     else if definition ? test && definition ? tests then
       throw "divine prototype: a definition cannot contain both test and tests"
     else if definition ? test && !builtins.isFunction definition.test then
-      throw "divine prototype: test must be a function returning a derivation"
+      throw "divine prototype: test must be a function returning a derivation; use tests.<name> for named checks"
     else if
       definition ? tests
       && (

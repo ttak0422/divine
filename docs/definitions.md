@@ -97,7 +97,8 @@ for the equality rule, including Nix string context.
 Use `test = { pkgs, ... }: ...` for one check, or `tests.foo = ...` and
 `tests.bar = ...` for several named checks. Each function returns a derivation,
 not a Lua snippet. A definition cannot contain both `test` and `tests`, even
-when `tests` is empty. Keep checks next to the definition they describe:
+when `tests` is empty. You may also use `tests.<name>` for a single check when
+you want a custom stable output name. Keep checks next to the definition they describe:
 
 ```nix
 {
