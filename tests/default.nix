@@ -86,6 +86,10 @@ suites
       ];
       compiler = [
         "testAcceptOperatorPendingKeyMode"
+        "testAfterConflict"
+        "testAfterDefaultAndFalse"
+        "testAfterOptIn"
+        "testAfterRepeatedAndNested"
         "testDefaultStartupDetailedAndNested"
         "testDefaultStartupShorthand"
         "testDependencyStartupUnit"
@@ -99,6 +103,7 @@ suites
         "testNormalizeEveryEventCase"
         "testNormalizeKeyTriggers"
         "testRejectEmptyCommand"
+        "testRejectInvalidAfter"
         "testRejectInvalidConfig"
         "testRejectInvalidKeyMode"
         "testRejectInvalidLoad"

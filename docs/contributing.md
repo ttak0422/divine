@@ -9,8 +9,8 @@ design review, examples and validation.
 Follow the requirements in [design.md](design.md) and the review process in
 [adr/README.md](adr/README.md). Do not resolve open design questions merely to
 make a check pass. Root and dependency definitions must retain the same
-recursive expressiveness. Do not introduce an external loader or automatically
-source `after/plugin`.
+recursive expressiveness. Do not introduce an external loader or source `after/plugin` by default.
+Explicit `loadAfter` handling is separate from the `config` callback.
 
 ## Configuration examples
 
@@ -33,7 +33,7 @@ See the [development instructions](../README.md#development) for commands and
 
 ### Lua tests
 
-Use mini.test named cases for the three Lua suites, run with `make test-lua` in
+Use mini.test named cases for the Lua suites, run with `make test-lua` in
 `nix develop`. Add each scenario to the explicit inventory in `tests/cases.lua`;
 an empty suite or a missing expected case must fail. `tests/helpers.lua` starts a
 fresh Neovim child and temporary fixture tree per case and cleans both up after

@@ -30,6 +30,7 @@ let
     "preConfig"
     "config"
     "load"
+    "loadAfter"
     "onEvents"
     "onCommands"
     "onFiletypes"
@@ -204,6 +205,7 @@ let
       // lib.optionalAttrs (settings ? preConfig) { before = callback "preConfig" "" settings.preConfig; }
       // lib.optionalAttrs (settings ? config) { after = callback "config" "" settings.config; }
       // lib.optionalAttrs (settings ? load) { load = callback "load" "name" settings.load; }
+      // lib.optionalAttrs (settings.loadAfter or false) { after_path = "${node.package}/after"; }
   ) graph.nodes;
   unknownRoot = builtins.attrNames (
     builtins.removeAttrs graph.metadata [

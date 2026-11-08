@@ -7,7 +7,8 @@
 - Define the Neovim configuration in Nix, arrange the required files at build
   time, and use the lightweight runtime for dynamic loading.
 - Managed plugins and their dependencies normally belong in `opt`, including
-  startup-loaded targets. Users are responsible for `after/`-related loading.
+  startup-loaded targets. `after/` handling follows its native directory-specific
+  semantics; explicit opt-in can supplement late package loading.
 - Use a common plugin definition for startup and deferred targets rather than
   separate input lists. Explicitly load non-delayed targets at startup while
   keeping them in `opt`; do not move them to `start`. The loading runtime must
@@ -224,22 +225,26 @@ or loading triggered by another load.
 
 Use ordinary `packadd` as the default load operation. **Lazy-loading an `opt`
 plugin after startup does not automatically source `after/plugin`.** For targets
-that need `after/plugin`, users can supply explicit configuration, source it
-manually or replace the load operation. No default dependency on, or automatic
+that need `after/plugin`, users can opt into the provisional `loadAfter` mechanism,
+supply explicit configuration, source it manually or replace the load operation. No default dependency on, or automatic
 introduction of, a helper library is selected.
 
 For targets loaded with `packadd` during `init`, the `after/` directory is added
 to the end of `runtimepath`. If normal plugin loading is enabled, Neovim's later
 standard `after/plugin` loading phase handles it. A custom operation that also
 sources it during `init` could execute it twice and is therefore not the default.
+The explicit mechanism preserves this native phase and only supplements missing
+scripts at `VimEnter`. After startup it sources opted-in scripts after all ordinary
+load operations in the unit, before configuration.
 After-load configuration runs when the load operation returns; it does not
 guarantee that all standard `after/plugin` loading has completed.
 
 `after/ftplugin` follows a separate path: runtime lookup of `ftplugin` files for
 `FileType`. Neither `packadd` nor after-load configuration is specified to execute
-everything in the `after/` directory as one batch. This section defines loading
-requirements; it does not claim that a custom load operation has been implemented
-or tested in execution.
+everything in the `after/` directory as one batch. `after/indent` and `after/syntax` likewise retain native lookup. Filetype detection
+is initialized separately; the explicit mechanism can register late
+`after/ftdetect` scripts without replaying detection for existing buffers.
+See [runtime.md](runtime.md#after-directories) for implemented behavior and limits.
 
 ## Implementation status
 

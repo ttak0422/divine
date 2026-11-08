@@ -12,6 +12,7 @@
 
 ---@class divine.Node: divine.Hooks, divine.TriggerNode
 ---@field name string Package directory name, not a Lua module name.
+---@field after_path? string Package after directory; explicit loadAfter opt-in.
 ---@field triggers? divine.Triggers Normalized lists; omission means no triggers.
 
 ---@class divine.Unit
@@ -72,6 +73,17 @@ function M.setup(plan)
   end
 
   ---@param id divine.UnitId
+  ---@param err any
+  ---@return nil
+  local function retain_failure(id, err)
+    controller.states[id] = "failed"
+    controller.errors[id] = "divine: unit "
+      .. id
+      .. " failed; partial effects cannot be retried:\n"
+      .. tostring(err)
+  end
+
+  ---@param id divine.UnitId
   ---@return nil
   function controller.load_unit(id)
     local unit = assert(units[id], "divine: unknown unit: " .. tostring(id))
@@ -105,6 +117,32 @@ function M.setup(plan)
         local load = node.load or vim.cmd.packadd
         load(node.name)
       end
+      local paths = {}
+      for _, member in ipairs(unit.members) do
+        local path = plan.nodes[member].after_path
+        if path then paths[#paths + 1] = path end
+      end
+      if #paths > 0 then
+        local after = require("divine.after")
+        after.ftdetect(paths)
+        if vim.v.vim_did_enter == 1 then
+          after.plugins(paths)
+        else
+          -- Native startup may still source these scripts. Do not guess its
+          -- phase from vim_did_init: -c and initial FileType run before VimEnter.
+          vim.api.nvim_create_autocmd("VimEnter", {
+            once = true,
+            callback = function()
+              if controller.states[id] == "failed" then return end
+              local success, message = xpcall(function() after.plugins(paths) end, debug.traceback)
+              if not success then
+                retain_failure(id, message)
+                error(controller.errors[id], 0)
+              end
+            end,
+          })
+        end
+      end
       for _, member in ipairs(unit.members) do
         local hook = plan.nodes[member].after
         if hook then hook() end
@@ -112,11 +150,7 @@ function M.setup(plan)
       controller.states[id] = "loaded"
     end, debug.traceback)
     if not ok then
-      controller.states[id] = "failed"
-      controller.errors[id] = "divine: unit "
-        .. id
-        .. " failed; partial effects cannot be retried:\n"
-        .. tostring(err)
+      retain_failure(id, err)
       error(controller.errors[id], 0)
     end
   end
@@ -138,5 +172,5 @@ function M.setup(plan)
   return controller
 end
 
--- after/plugin is intentionally not sourced here; it is not the after action.
+-- The after callback is configuration, distinct from opt-in after/ scripts.
 return M

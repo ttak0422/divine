@@ -50,6 +50,55 @@ let
     };
 in
 {
+  testAfterOptIn = {
+    expr = (compileOne { loadAfter = true; }).plan.nodes.${id a}.after_path;
+    expected = "${a}/after";
+  };
+  testAfterDefaultAndFalse = {
+    expr = lib.all (settings: !((compileOne settings).plan.nodes.${id a} ? after_path)) [
+      { }
+      { loadAfter = false; }
+    ];
+    expected = true;
+  };
+  testAfterRepeatedAndNested = {
+    expr =
+      (api.compile {
+        plugins = [
+          a
+          {
+            plugin = b;
+            dependPlugins = [
+              {
+                plugin = a;
+                loadAfter = true;
+              }
+            ];
+          }
+        ];
+      }).plan.nodes.${id a}.after_path;
+    expected = "${a}/after";
+  };
+  testAfterConflict = {
+    expr =
+      (api.compile {
+        plugins = [
+          {
+            plugin = a;
+            loadAfter = true;
+          }
+          {
+            plugin = a;
+            loadAfter = false;
+          }
+        ];
+      }).lua;
+    expectedError.type = "ThrownError";
+  };
+  testRejectInvalidAfter = {
+    expr = (compileOne { loadAfter = "plugin"; }).lua;
+    expectedError.type = "ThrownError";
+  };
   testNormalizeEventAliases = {
     expr =
       (compileOne {

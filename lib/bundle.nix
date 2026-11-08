@@ -20,10 +20,7 @@ let
     local root = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h")
     vim.opt.runtimepath:prepend(root)
     vim.opt.packpath:prepend(root)
-    for _, path in ipairs(${lib.generators.toLua { } compiled.runtimePaths}) do
-      vim.opt.runtimepath:append(path)
-      if vim.fn.isdirectory(path .. "/after") == 1 then vim.opt.runtimepath:append(path .. "/after") end
-    end
+    require("divine.after").add_runtime_paths(${lib.generators.toLua { } compiled.runtimePaths})
     local tools = ${lib.generators.toLua { } (lib.makeBinPath compiled.graph.extraPackages)}
     if tools ~= "" then
       local previous = vim.env.PATH or ""

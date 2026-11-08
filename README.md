@@ -46,7 +46,9 @@ Run Neovim with `nvim -u /path/to/bundle/init.lua`.
   default to startup loading independently of their parent.
 - Plugins remain in `opt`, including those loaded at startup. Native startup may
   source unguarded plugin scripts again after `packadd`; divine does not
-  automatically source deferred `after/plugin` scripts.
+  automatically source deferred `after/plugin` scripts unless the definition sets
+  `loadAfter = true`. See [after directories](docs/runtime.md#after-directories)
+  for startup timing and native filetype overrides.
 
 See the [runtime guide](docs/runtime.md) for configuration fields,
 trigger syntax and loading behavior. The API is evolving, and broad third-party
