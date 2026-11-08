@@ -59,6 +59,16 @@ let
       default = [ ];
       description = "External tools required by this plugin.";
     };
+    doc = mkOption {
+      type = types.str;
+      description = "Markdown documentation, emitted separately from the runtime bundle.";
+    };
+    test = mkOption {
+      type = types.addCheck types.attrs (
+        value: lib.all builtins.isFunction (builtins.attrValues value)
+      );
+      description = "Globally named check functions; each returns a derivation using pkgs, bundle or neovim.";
+    };
     preConfig = mkOption {
       type = luaSource;
       description = "Lua text or file executed before loading.";

@@ -1,6 +1,7 @@
 { lib }:
 let
   suites = {
+    definitions = import ./definitions.nix { inherit lib; };
     options = import ./options.nix { inherit lib; };
     input = import ./eval.nix { inherit lib; };
     resolver = import ./resolver.nix { inherit lib; };
@@ -14,6 +15,32 @@ suites
   testSuiteDiscovery = {
     expr = builtins.mapAttrs (_: suite: builtins.attrNames suite) suites;
     expected = {
+      definitions = [
+        "testCheckValuesRemainLazy"
+        "testConflictingDocs"
+        "testDisjointRepeatedTests"
+        "testDocsDoNotRunChecks"
+        "testDuplicateAcrossPackages"
+        "testDuplicateDifferentFunctions"
+        "testDuplicateNested"
+        "testDuplicateNotHiddenByToolQuery"
+        "testDuplicateSameFunction"
+        "testEmptyChecks"
+        "testFiniteCrossFileCycle"
+        "testNamedPackageCheck"
+        "testNestedCollection"
+        "testOptionalContext"
+        "testRejectEmptyName"
+        "testRejectNonDerivation"
+        "testRejectNonFunction"
+        "testRejectNonSet"
+        "testRejectNonStringDoc"
+        "testRejectRootTestRegistry"
+        "testRepeatedDocs"
+        "testRuntimeDoesNotRunChecks"
+        "testShorthandDoesNotRepeatTests"
+        "testSuppliedContext"
+      ];
       options = [
         "testAcceptOperatorPendingKeyMode"
         "testDoNotEvaluatePackageModuleMetadata"

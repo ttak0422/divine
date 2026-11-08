@@ -38,6 +38,7 @@ let
       throw "divine prototype: expected a list of plugin definitions";
   resolve = import ./resolve.nix { inherit lib inspectDefinitions; };
   compile = import ./compile.nix { inherit lib resolve; };
+  mkBundle = import ./bundle.nix { inherit lib compile; };
 in
 {
   /**
@@ -89,5 +90,27 @@ in
     mkBundle :: { pkgs :: PackageSet, configuration :: CompilationConfiguration } -> Derivation
     ```
   */
-  mkBundle = import ./bundle.nix { inherit lib compile; };
+  inherit mkBundle;
+
+  /**
+    Build named checks separately, evaluating each test function only on demand.
+
+    # Type
+
+    ```
+    mkChecks :: { pkgs :: PackageSet, configuration :: CompilationConfiguration, bundle? :: Derivation, neovim? :: Derivation } -> AttrsOf Derivation
+    ```
+  */
+  mkChecks = import ./checks.nix { inherit lib compile mkBundle; };
+
+  /**
+    Build a standalone Markdown document from inline documentation and origins.
+
+    # Type
+
+    ```
+    mkDocs :: { pkgs :: PackageSet, configuration :: CompilationConfiguration } -> Derivation
+    ```
+  */
+  mkDocs = import ./docs.nix { inherit lib compile; };
 }
