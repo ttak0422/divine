@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-11-08
-discussion: "https://github.com/ttak0422/divine/pull/1"
+discussion: "https://github.com/ttak0422/divine/pull/10"
 ---
 
 # Use output-path identity for finite package back-references
@@ -66,3 +66,5 @@ No runtime or resolver behavior changes are required by this decision.
 Public names, configuration-unit identity and any multi-package input interface
 remain open. Repeated-definition policies remain proposed in ADR 0002; accepting
 package identity does not silently accept those policies.
+
+The original prototype discussion is retained in [PR #1](https://github.com/ttak0422/divine/pull/1).
