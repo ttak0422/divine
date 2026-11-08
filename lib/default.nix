@@ -25,6 +25,18 @@ let
       throw "divine prototype: dependency definitions must be a list"
     else if definition ? lazy && definition.lazy != null && !builtins.isBool definition.lazy then
       throw "divine prototype: an explicit load-timing flag must be boolean or null"
+    else if definition ? test && definition ? tests then
+      throw "divine prototype: a definition cannot contain both test and tests"
+    else if definition ? test && !builtins.isFunction definition.test then
+      throw "divine prototype: test must be a function returning a derivation; use tests.<name> for named checks"
+    else if
+      definition ? tests
+      && (
+        !builtins.isAttrs definition.tests
+        || !lib.all builtins.isFunction (builtins.attrValues definition.tests)
+      )
+    then
+      throw "divine prototype: tests must be an attribute set of functions"
     else
       {
         inherit definition;
@@ -38,6 +50,7 @@ let
       throw "divine prototype: expected a list of plugin definitions";
   resolve = import ./resolve.nix { inherit lib inspectDefinitions; };
   compile = import ./compile.nix { inherit lib resolve; };
+  mkBundle = import ./bundle.nix { inherit lib compile; };
 in
 {
   /**
@@ -89,5 +102,27 @@ in
     mkBundle :: { pkgs :: PackageSet, configuration :: CompilationConfiguration } -> Derivation
     ```
   */
-  mkBundle = import ./bundle.nix { inherit lib compile; };
+  inherit mkBundle;
+
+  /**
+    Build named checks separately, evaluating each test function only on demand.
+
+    # Type
+
+    ```
+    mkChecks :: { pkgs :: PackageSet, configuration :: CompilationConfiguration, bundle? :: Derivation, neovim? :: Derivation } -> AttrsOf Derivation
+    ```
+  */
+  mkChecks = import ./checks.nix { inherit lib compile mkBundle; };
+
+  /**
+    Build a standalone Markdown document from inline documentation and origins.
+
+    # Type
+
+    ```
+    mkDocs :: { pkgs :: PackageSet, configuration :: CompilationConfiguration } -> Derivation
+    ```
+  */
+  mkDocs = import ./docs.nix { inherit lib compile; };
 }

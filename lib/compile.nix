@@ -27,6 +27,7 @@ let
   fail = message: throw "divine compiler: ${message}";
   allowed = [
     "lazy"
+    "doc"
     "preConfig"
     "config"
     "load"

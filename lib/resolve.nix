@@ -145,6 +145,50 @@ let
   ) { } occurrences;
 
   /**
+    Collect named tests without comparing functions or evaluating their bodies.
+
+    Names are global within one configuration. Repeated declarations, including
+    the same function, fail with both input locations rather than being dropped.
+
+    # Type
+
+    ```
+    tests :: AttrsOf { run :: CheckFunction, origin :: String }
+    ```
+  */
+  tests = foldl' (
+    acc: occurrence:
+    let
+      definition = occurrence.definition;
+      declared =
+        if definition ? test then
+          {
+            ${lib.getName definition.plugin} = definition.test;
+          }
+        else
+          definition.tests or { };
+    in
+    if !builtins.isAttrs declared || !lib.all builtins.isFunction (builtins.attrValues declared) then
+      fail "tests at ${occurrence.origin} must be an attribute set of functions"
+    else
+      foldl' (
+        state: name:
+        if name == "" then
+          fail "test names at ${occurrence.origin} must be nonempty"
+        else if builtins.hasAttr name state then
+          fail "duplicate test '${name}' at ${state.${name}.origin} and ${occurrence.origin}; use tests.<explicit-name> with unique names"
+        else
+          state
+          // {
+            ${name} = {
+              run = declared.${name};
+              inherit (occurrence) origin;
+            };
+          }
+      ) acc (attrNames declared)
+  ) { } occurrences;
+
+  /**
     Merge equal settings for one identity and retain each field's first origin.
 
     Conflicting or incomparable values throw. Dependencies and external
@@ -167,6 +211,8 @@ let
               "plugin"
               "dependPlugins"
               "extraPackages"
+              "test"
+              "tests"
             ]
           );
         in
@@ -328,15 +374,17 @@ let
   rootTools = packageSet "root extraPackages" extraPackages;
   tools = packageSet "extraPackages" (rootTools ++ lib.concatMap (id: nodes.${id}.extraPackages) ids);
 in
-deepSeq validation (
-  deepSeq (map key tools) {
-    inherit nodes units;
-    roots = lib.unique (map (node: key node.definition.plugin) trees);
-    startupUnits = map (unit: unit.id) (builtins.filter (unit: unit.startup) units);
-    extraPackages = tools;
-    metadata = builtins.removeAttrs request [
-      "plugins"
-      "extraPackages"
-    ];
-  }
+deepSeq (attrNames tests) (
+  deepSeq validation (
+    deepSeq (map key tools) {
+      inherit nodes units tests;
+      roots = lib.unique (map (node: key node.definition.plugin) trees);
+      startupUnits = map (unit: unit.id) (builtins.filter (unit: unit.startup) units);
+      extraPackages = tools;
+      metadata = builtins.removeAttrs request [
+        "plugins"
+        "extraPackages"
+      ];
+    }
+  )
 )

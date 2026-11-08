@@ -7,35 +7,40 @@ Declare a Neovim configuration in Nix and load plugins with a small Lua runtime.
 `lib.mkBundle` builds a directory containing `init.lua`, the runtime and plugins
 in `pack/divine/opt`. Plugins load at startup by default.
 
-With `pkgs` and divine's `lib` bound:
+From a checkout, build the shared Telescope and project.nvim example:
+
+```sh
+nix build .#example
+nvim -u ./result/init.lua
+```
+
+The output is a configuration bundle, not a Neovim executable; the second command
+uses your installed Neovim. Press `<Space>ff` for Telescope's file picker. Open a
+file inside a project, run `:ProjectRoot` to record it, then use
+`:Telescope projects` to revisit it.
+
+[`examples/example.nix`](examples/example.nix) defines the complete configuration.
+It combines the [Telescope](examples/cartridges/telescope.nix) and
+[project.nvim](examples/cartridges/project.nix) cartridges with a direct
+`mini.pairs` definition and inline `config`. It automatically closes parentheses
+while leaving apostrophes unpaired. Small configurations do not need cartridges.
+Common startup settings belong to the complete configuration; cartridges keep
+reusable plugin definitions, their configuration, documentation and checks.
+
+To customize the example, edit `examples/example.nix` for composition and small
+inline configurations, or `examples/cartridges/` for reusable plugin configurations.
+Then rebuild and restart your installed Neovim with the commands above.
+
+The flake builds this configuration with `lib.mkBundle`. The inline checks and
+startup smoke test use the same exported bundle. With `pkgs` and divine's `lib`
+bound, build it directly as follows:
 
 ```nix
 lib.mkBundle {
   inherit pkgs;
-  configuration = {
-    plugins = [
-      {
-        plugin = pkgs.vimPlugins.telescope-nvim;
-        dependPlugins = [
-          pkgs.vimPlugins.plenary-nvim
-        ];
-        config = # lua
-          ''
-            require("telescope").setup({})
-          '';
-      }
-    ];
-    extraPackages = [ pkgs.ripgrep pkgs.fd ];
-    startupConfig = # lua
-      ''
-        vim.g.mapleader = " "
-        vim.keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>")
-      '';
-  };
+  configuration = import ./examples/example.nix { inherit pkgs; };
 }
 ```
-
-Run Neovim with `nvim -u /path/to/bundle/init.lua`.
 
 - Declare required plugin dependencies in `dependPlugins`; divine does not use
   nixpkgs plugin `dependencies` to populate the bundle or determine loading.
@@ -53,6 +58,25 @@ Run Neovim with `nvim -u /path/to/bundle/init.lua`.
 See the [runtime guide](docs/runtime.md) for configuration fields,
 trigger syntax and loading behavior. The API is evolving, and broad third-party
 plugin compatibility has not been verified.
+
+## Reuse plugin definitions with cartridges
+
+Split plugin families into ordinary Nix files while keeping each plugin's Lua
+configuration, `doc` string and a single `test` function or named `tests` functions
+together. Use package references for cross-file dependency edges and include each full definition once.
+
+```nix
+{
+  bundle = lib.mkBundle { inherit pkgs configuration; };
+  documentation = lib.mkDocs { inherit pkgs configuration; };
+  checks = lib.mkChecks { inherit pkgs configuration; };
+}
+```
+
+Checks are Nix functions returning derivations, so they can use Python/pynvim,
+RPC, fixtures and editor restarts without adding tools to the runtime bundle.
+See the [cartridge guide](docs/cartridges.md) and
+[complete configuration](examples/example.nix) for this provisional API.
 
 ## Development
 
@@ -76,6 +100,7 @@ See [ADR 0006](docs/adr/0006-use-nix-unit.md) and
 ## Documentation
 
 - [Design requirements](docs/design.md)
+- [Cartridges, documentation and checks](docs/cartridges.md)
 - [Dependency resolution](docs/resolution.md)
 - [Nix type reference](docs/nix-types.md)
 - [Architecture decisions](docs/adr/README.md)

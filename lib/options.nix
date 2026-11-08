@@ -59,6 +59,18 @@ let
       default = [ ];
       description = "External tools required by this plugin.";
     };
+    doc = mkOption {
+      type = types.str;
+      description = "Markdown documentation, emitted separately from the runtime bundle.";
+    };
+    test = mkOption {
+      type = types.addCheck types.anything builtins.isFunction;
+      description = "One check function, named from the plugin package with lib.getName.";
+    };
+    tests = mkOption {
+      type = types.addCheck types.attrs (value: lib.all builtins.isFunction (builtins.attrValues value));
+      description = "Globally named check functions; each returns a derivation using pkgs, bundle or neovim.";
+    };
     preConfig = mkOption {
       type = luaSource;
       description = "Lua text or file executed before loading.";
@@ -161,7 +173,9 @@ let
         builtins.isAttrs value
         && lib.all (
           name:
-          builtins.hasAttr name options && options.${name}.type.check value.${name} && plain value.${name}
+          builtins.hasAttr name options
+          && options.${name}.type.check value.${name}
+          && (name == "tests" || plain value.${name})
         ) (builtins.attrNames value);
       /**
         Hide a package's module discriminator in a temporary validation view.
@@ -184,7 +198,11 @@ let
       evaluated = lib.evalModules {
         modules = [
           { inherit options; }
-          { config = lib.mapAttrs (_: validationView) value; }
+          {
+            # The callback map is already checked above. Keep arbitrary test
+            # names (including _type) opaque to module-property interpretation.
+            config = lib.mapAttrs (name: item: if name == "tests" then { } else validationView item) value;
+          }
         ];
       };
       names = lib.unique (required ++ builtins.attrNames value);
@@ -229,9 +247,14 @@ let
   definition =
     entry:
     let
-      value = evaluate definitionOptions [ "plugin" "lazy" ] (
-        if lib.isDerivation entry then { plugin = entry; } else entry
-      );
+      raw = if lib.isDerivation entry then { plugin = entry; } else entry;
+      value =
+        if builtins.isAttrs raw && raw ? test && raw ? tests then
+          throw "divine input: a definition cannot contain both test and tests"
+        else if builtins.isAttrs raw && raw ? test && !builtins.isFunction raw.test then
+          throw "divine input: test must be a function; use tests.<name> for named checks"
+        else
+          evaluate definitionOptions [ "plugin" "lazy" ] raw;
     in
     value
     // lib.optionalAttrs (value ? dependPlugins) {
