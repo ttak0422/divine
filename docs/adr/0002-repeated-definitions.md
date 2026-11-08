@@ -10,15 +10,16 @@ discussion: "https://github.com/ttak0422/divine/pull/1"
 
 A package can occur at multiple roots or dependency locations. The prototype
 needs to account for those occurrences without silently dropping settings or
-inventing Lua and trigger ordering. The final merge and conflict policies remain
-open in [the design requirements](../design.md).
+inventing Lua and trigger ordering. Remaining composition policies stay open in [the design requirements](../design.md).
+[ADR 0011](0011-normalize-repeated-trigger-forms.md) separately accepts comparison
+after equivalent trigger normalization, with other differences remaining errors.
 
 ## Considered Options
 
 - Combine complementary fields, accept equal repeated values, reject conflicting
   values, and form unions of dependency edges and external packages (prototype).
 
-[resolution.md](../resolution.md#identity-and-repeated-definitions) leaves other
+[resolution.md](../resolution.md#singleton-identity-and-repeated-definitions) leaves other
 merge and conflict policies open without specifying a competing policy. No
 additional option or completed comparison is recorded here.
 
@@ -26,9 +27,12 @@ additional option or completed comparison is recorded here.
 
 Proposed option: "Combine complementary fields and reject conflicts", because it
 makes shared declarations useful while keeping ambiguous settings explicit
-errors, the reason recorded in [resolution.md](../resolution.md#identity-and-repeated-definitions).
+errors, the reason recorded in [resolution.md](../resolution.md#singleton-identity-and-repeated-definitions).
 
-Equal typed values are accepted, including matching Nix string build contexts.
+The comparison refinement in [ADR 0011](0011-normalize-repeated-trigger-forms.md)
+is accepted independently of this broader proposal. Equivalent trigger forms use
+a canonical comparison view; other fields retain exact typed equality, including
+matching Nix string build contexts.
 Nested attribute values must be equal rather than recursively merged. Conflicts
 report the field, package and both input locations; incomparable values are not
 silently selected. Lua text, trigger lists and arbitrary settings are not
@@ -40,15 +44,16 @@ All occurrence locations remain in `origins`.
 
 - Positive: Complementary declarations can share one node, with provenance and
   explicit diagnostics instead of hidden precedence or discarded values.
-- Negative: Different values for a repeated field, including trigger lists or
-  nested settings, fail rather than composing automatically. This prototype
-  policy therefore constrains how multiple declarations can be combined.
+- Negative: Different values for a repeated field, including trigger lists that
+  differ after normalization or nested settings, fail rather than composing
+  automatically. Users must provide an explicit composed value when needed.
 
 ## Implementation and Open Questions
 
 Implemented in [lib/resolve.nix](../../lib/resolve.nix), with repeated-definition,
 conflict, string-context and recursive-tool fixtures in
 [tests/resolver.nix](../../tests/resolver.nix). Implementation is not acceptance.
-Review the merge/equality policy and its interaction with the accepted package
-identity before treating it as a public contract. ADR 0001 does not accept this
-record's field equality, conflict, edge/tool-union or provenance policies.
+Review complementary-field composition, edge/tool unions and retained provenance
+before treating those parts of this proposal as a public contract. ADR 0001 does
+not accept them; ADR 0011 accepts only the comparison refinement and continued
+conflicts for other unequal specifications.

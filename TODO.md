@@ -10,7 +10,8 @@ item does not mean its design has been accepted.
 - [x] **TRIGGERLESS**: allow explicit deferred targets without triggers; load only on prerequisite or manual demand, without inferring deferral from trigger declarations (ADR 0010). This does not establish a stable manual group-reference API.
 - [ ] **TRIGGER-POLICY**: choose public omitted/single/multiple trigger representations, matching and handoff details; triggerless loading semantics are accepted separately in ADR 0010.
 - [x] **IDENTITY**: use output-path identity for package nodes within one resolved graph (ADR 0001); configuration-unit identity and a possible multi-package API remain separate API decisions.
-- [ ] **REPEATED-DEFINITIONS**: review/adopt or revise field equality/conflict errors, edge/tool unions and retained provenance (ADR 0002); accepting package identity does not accept these policies.
+- [x] **TRIGGER-NORMALIZATION**: compare equivalent trigger forms canonically in Nix, preserving order and string context and rejecting other differences (ADR 0011).
+- [ ] **REPEATED-DEFINITIONS**: review the remaining complementary-field composition, edge/tool unions and provenance policies (ADR 0002); accepted trigger normalization and strict comparison do not adopt these policies.
 - [x] **CYCLES**: use finite package occurrences as back-references, including cycles and self-dependencies (ADR 0001); directly cyclic Nix values remain outside the finite-input contract.
 - [x] **INPUT-SCHEMA**: validate compiler inputs with mkOption types/descriptions and nullable timing before the existing resolver; public module API and generated documentation remain separate.
 - [x] **PLAN**: prototype finite graph normalization, SCC extraction and dependency-first load units, including cycles and self-dependencies.

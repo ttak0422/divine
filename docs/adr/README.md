@@ -72,7 +72,9 @@ multi-package interface and within-unit execution are not settled by that record
 Startup prerequisite demand is accepted in ADR 0004; triggerless deferred loading
 is accepted in ADR 0010. Neither accepts public names, trigger representations
 or stable manual group references. The `lazy = false` default is specified
-separately in the design requirements.
+separately in the design requirements. Comparison after equivalent trigger
+normalization is accepted in ADR 0011; the remaining composition policies in
+ADR 0002 stay proposed.
 
 - [0001: Use output-path identity for finite package back-references](0001-output-path-identity.md) (`accepted`).
 - [0002: Combine repeated definitions with explicit conflicts](0002-repeated-definitions.md) (`proposed`).
@@ -88,3 +90,5 @@ separately in the design requirements.
 - [0009: Configure ordered packages as independent units](0009-ordered-package-units.md) (`proposed`).
 
 - [0010: Allow deferred targets without triggers](0010-triggerless-deferred-loading.md) (`accepted`).
+
+- [0011: Normalize equivalent trigger forms before comparison](0011-normalize-repeated-trigger-forms.md) (`accepted`).

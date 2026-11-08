@@ -255,6 +255,9 @@ single-mode restriction, and runtime trees accept paths or packages.
 materializes this safe sentinel, but does not insert empty trigger lists into
 individual occurrences. The resolver explicitly ignores null `lazy`
 values, compares the remaining runtime/documentation fields, and applies `false` afterward.
+Known trigger fields use canonical comparison views from `lib/trigger-forms.nix`,
+shared with compilation. The resolved graph keeps each field's first raw value;
+this does not change the input adapter's preservation of supplied shapes.
 Named tests are collected separately without comparing function values.
 `nullOr` alone does not provide this merge policy. Explicit true/false conflicts
 still fail in either order; null is not accepted as omission for other fields.
@@ -264,16 +267,20 @@ module evaluator cannot interpret it as an override. Returned package values
 are the originals, including that metadata; it is never evaluated for loading.
 
 Module evaluation validates each occurrence separately, rather than merging
-repeated plugins as modules. This preserves exact typed equality (including
-string context), whole-field conflicts, edge/tool unions and input locations.
+repeated plugins as modules. Equivalent trigger representations compare after
+normalization; other fields keep exact typed equality, including string context.
+Whole-field conflicts, current edge/tool unions and input locations are retained.
 The inspector and resolver still allow extension metadata; the compiler's
 schema rejects unknown root, definition and key fields. The adapter is internal,
 not a new public module API. Raw module properties such as `mkDefault` and
 `mkMerge` are rejected before evaluation, rather than interpreted as input data; public names and existing proposed ADRs remain
 provisional. Generated option documentation remains future work.
 
-Event declarations accept native aliases and case variants. Compilation maps them
-to unique Neovim 0.12.4 callback spellings; runtime plan event strings are canonical.
+Event declarations accept native aliases and case variants. Shared normalization
+maps them to Neovim 0.12.4 callback spellings while retaining their build context.
+The comparison view removes only context-equal duplicate conditions and preserves
+distinct-element order. Compilation emits unique event strings; key duplicates
+are retained for the runtime's conflict checks. Runtime event strings are canonical.
 Unknown names fail during compilation, including for startup-loaded nodes.
 
 ## Inline documentation and checks
