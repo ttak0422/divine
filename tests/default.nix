@@ -1,6 +1,7 @@
 { lib }:
 let
   suites = {
+    triggerNormalization = import ./trigger-normalization.nix { inherit lib; };
     packages = import ./packages.nix { inherit lib; };
     definitions = import ./definitions.nix { inherit lib; };
     options = import ./options.nix { inherit lib; };
@@ -16,6 +17,37 @@ suites
   testSuiteDiscovery = {
     expr = builtins.mapAttrs (_: suite: builtins.attrNames suite) suites;
     expected = {
+      triggerNormalization = [
+        "testCanonicalEventRetainsContextInPlan"
+        "testCommandSingletonList"
+        "testConditionDuplicatesPreserveFirstOrder"
+        "testConflictRetainsBothLocations"
+        "testDifferentConditionsStillConflict"
+        "testDuplicateKeysAreNotEquivalent"
+        "testDuplicateKeysRemainInPlan"
+        "testEventAliasContextsStillConflict"
+        "testEventCanonicalForms"
+        "testEveryEventAliasAndCase"
+        "testExplicitEmptyStillConflicts"
+        "testFiletypeSingletonList"
+        "testIndependentGroupsDoNotMerge"
+        "testInvalidRawFormsDoNotBecomeEquivalent"
+        "testInvalidRawValuesKeepStrictComparison"
+        "testKeyCanonicalForms"
+        "testKeyContextsStillConflict"
+        "testKeyOrderModeAndLhsStillConflict"
+        "testMatchingContextsAreAccepted"
+        "testMatchingKeyContextsAreAccepted"
+        "testMixedContextDuplicatesAreNotCollapsed"
+        "testModuleSingletonList"
+        "testNestedRepetitions"
+        "testNonEventCaseStillConflicts"
+        "testOmissionDoesNotSupplyEmptyDefaults"
+        "testOrderedConditionsStillConflict"
+        "testRetainRawSettingsAndOrigins"
+        "testStringContextsStillConflict"
+        "testUnknownRawEventsRemainCompilerErrors"
+      ];
       packages = [
         "testBuildContextPreserved"
         "testConflictingAfterPolicy"
@@ -88,13 +120,13 @@ suites
         "testDoNotEvaluatePackageModuleMetadata"
         "testNestedNullAndStartup"
         "testNoSyntheticTriggerConflict"
+        "testNormalizeRepeatedTriggerForms"
         "testNullAndExplicitBothOrders"
         "testNullDoesNotHideConflict"
         "testNullTimingDefault"
         "testNullableSchema"
         "testOpaquePackageMetadata"
         "testPreservePackageModuleMetadata"
-        "testPreserveRawConflict"
         "testRejectDependencyModuleProperty"
         "testRejectInvalidNestedTools"
         "testRejectInvalidStartup"
