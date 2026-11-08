@@ -19,6 +19,7 @@
     config = # lua
       ''
         require("telescope").setup({})
+        vim.keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>")
       '';
     doc = ''
       Telescope provides interactive pickers. Run `:Telescope find_files` to

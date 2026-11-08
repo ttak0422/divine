@@ -7,35 +7,29 @@ Declare a Neovim configuration in Nix and load plugins with a small Lua runtime.
 `lib.mkBundle` builds a directory containing `init.lua`, the runtime and plugins
 in `pack/divine/opt`. Plugins load at startup by default.
 
-With `pkgs` and divine's `lib` bound:
+From a checkout, build the shared Telescope and project.nvim example:
 
-```nix
-lib.mkBundle {
-  inherit pkgs;
-  configuration = {
-    plugins = [
-      {
-        plugin = pkgs.vimPlugins.telescope-nvim;
-        dependPlugins = [
-          pkgs.vimPlugins.plenary-nvim
-        ];
-        config = # lua
-          ''
-            require("telescope").setup({})
-          '';
-      }
-    ];
-    extraPackages = [ pkgs.ripgrep pkgs.fd ];
-    startupConfig = # lua
-      ''
-        vim.g.mapleader = " "
-        vim.keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>")
-      '';
-  };
-}
+```sh
+nix build .#example
+nvim -u ./result/init.lua
 ```
 
-Run Neovim with `nvim -u /path/to/bundle/init.lua`.
+The output is a configuration bundle, not a Neovim executable; the second command
+uses your installed Neovim. Press `<Space>ff` for Telescope's file picker. Open a
+file inside a project, run `:ProjectRoot` to record it, then use
+`:Telescope projects` to revisit it.
+
+[`examples/telescope.nix`](examples/telescope.nix) is a thin `lib.mkBundle` entry
+point importing [the cartridges](examples/cartridges/default.nix). Telescope's
+configuration, mapping and tools live in its cartridge; project.nvim's cartridge
+enables the projects extension. The exported bundle is also used by the inline
+checks and startup smoke test.
+
+With `pkgs` and divine's `lib` bound, the same entry can be imported directly:
+
+```nix
+import ./examples/telescope.nix { inherit pkgs lib; }
+```
 
 - Declare required plugin dependencies in `dependPlugins`; divine does not use
   nixpkgs plugin `dependencies` to populate the bundle or determine loading.
@@ -52,7 +46,7 @@ See the [runtime guide](docs/runtime.md) for configuration fields,
 trigger syntax and loading behavior. The API is evolving, and broad third-party
 plugin compatibility has not been verified.
 
-## Keep definitions together
+## Keep configuration in cartridges
 
 Split plugin families into ordinary Nix files while keeping each plugin's Lua
 configuration, `doc` string and a single `test` function or named `tests` functions together. Use package
@@ -68,8 +62,8 @@ references for cross-file dependency edges and include each full definition once
 
 Checks are Nix functions returning derivations, so they can use Python/pynvim,
 RPC, fixtures and editor restarts without adding tools to the runtime bundle.
-See the [definition guide](docs/definitions.md) and
-[grouped example](examples/definitions/default.nix) for this provisional API.
+See the [cartridge guide](docs/cartridges.md) and
+[shared cartridges](examples/cartridges/default.nix) for this provisional API.
 
 ## Development
 
@@ -93,7 +87,7 @@ See [ADR 0006](docs/adr/0006-use-nix-unit.md) and
 ## Documentation
 
 - [Design requirements](docs/design.md)
-- [Inline definitions, documentation and checks](docs/definitions.md)
+- [Cartridges, documentation and checks](docs/cartridges.md)
 - [Dependency resolution](docs/resolution.md)
 - [Nix type reference](docs/nix-types.md)
 - [Architecture decisions](docs/adr/README.md)

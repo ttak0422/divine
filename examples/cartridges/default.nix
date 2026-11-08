@@ -1,12 +1,12 @@
 /**
-  Compose ordinary Nix definition groups, registering each full definition once.
+  Compose ordinary Nix cartridges, registering each full definition once.
 
-  The project group enables the Telescope projects picker.
+  The project cartridge enables the Telescope projects picker.
 
   # Type
 
   ```
-  import ./examples/definitions :: { pkgs :: PackageSet } -> Configuration
+  import ./examples/cartridges :: { pkgs :: PackageSet } -> Configuration
   ```
 */
 { pkgs }:

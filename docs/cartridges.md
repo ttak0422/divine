@@ -1,13 +1,13 @@
-# Inline definitions across files
+# Cartridges: configuration, documentation and checks
 
 This guide describes the provisional definition, documentation and check APIs.
-The grouping shown here is ordinary Nix composition, not a module registry or a
-new import mechanism. Public names remain under review.
+A cartridge is an ordinary Nix file returning related plugin definitions, not
+a module registry or a new import mechanism. Public names remain under review.
 
-## Group related plugins with ordinary imports
+## Compose cartridges with ordinary imports
 
 A file can return named definitions for a family of plugins. For example,
-[the Telescope group](../examples/definitions/telescope.nix) keeps its package,
+[the Telescope cartridge](../examples/cartridges/telescope.nix) keeps its package,
 Lua configuration, documentation and check in one place:
 
 ```nix
@@ -42,16 +42,22 @@ in
 }
 ```
 
-The [complete example](../examples/definitions/default.nix) needs only `pkgs`:
+The [shared configuration](../examples/cartridges/default.nix) needs only `pkgs`.
+The public `packages.<system>.example` output wraps it through
+[`examples/telescope.nix`](../examples/telescope.nix); both the inline checks and
+startup smoke test use that exported bundle. Build it with `nix build .#example`,
+then run installed Neovim with `nvim -u ./result/init.lua`.
+
+To reuse the same configuration:
 
 ```nix
-configuration = import ./examples/definitions { inherit pkgs; };
+configuration = import ./examples/cartridges { inherit pkgs; };
 ```
 
-The [project group](../examples/definitions/project.nix) enables the optional
+The [project cartridge](../examples/cartridges/project.nix) enables the optional
 Telescope projects picker and declares `dependPlugins = [ telescope.telescope.plugin ];`.
 This dependency belongs to this configuration, not to project.nvim universally.
-It ensures Telescope is configured before the project group loads its extension.
+It ensures Telescope is configured before the project cartridge loads its extension.
 The full Telescope definition is registered once at the root; resolution uses
 package output-path identity to combine the reference with its configuration.
 
@@ -146,10 +152,10 @@ not establish input-method correctness. This retains ordinary Nix control over
 tools, fixtures, build phases and multiple processes, rather than restricting
 tests to a fixed Lua runner.
 
-For a concrete example, the Telescope group's check starts two fresh Neovim
+For a concrete example, the Telescope cartridge's check starts two fresh Neovim
 processes through pynvim and asserts that its picker function is available.
 That is an RPC/startup smoke test, not a picker-interaction or persistence test.
-The project group's check records a temporary project using `:ProjectRoot`,
+The project cartridge's check records a temporary project using `:ProjectRoot`,
 asserts it appears in history, opens the real projects picker, checks its result
 and closes it. Both imported example checks are included in the flake checks,
 with isolated HOME/XDG directories. This does not cover every picker action or
