@@ -51,8 +51,9 @@ children, not package values. Trees must be finite. Inspection checks only the
 package, dependency-list structure and optional boolean-or-null `lazy`; other fields
 remain unconstrained at that stage. For resolution, every definition's optional
 `extraPackages` must also be a package list. Missing `dependPlugins` and
-`extraPackages` act as empty lists. Other definition fields become node `settings`,
-and other root fields become graph `metadata`.
+`extraPackages` act as empty lists. Named test functions are collected separately;
+other definition fields become node `settings`, and other root fields become
+graph `metadata`.
 
 ## Resolved graph
 
