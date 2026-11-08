@@ -23,7 +23,8 @@ item does not mean its design has been accepted.
 - [x] **FILETYPE**: match current/new buffers and handle new ftplugin/after-ftplugin separately.
 - [ ] **KEY**: key operation replay is implemented with normal-mode count/register and insert/visual coverage; operator-pending keys retain native state with a textlock-bound load; add select/terminal fixtures.
 - [x] **MODULE**: native require handoff with proposed exact/dotted namespace matching and recursion protection.
-- [ ] **DOCS**: generate configuration documentation from resolved input and record source provenance.
+- [x] **DOCS**: generate standalone Markdown from inline `doc`, package identities and composed-input declaration locations; source-file line tracking and option documentation remain separate.
+- [x] **INLINE-CHECKS**: collect definition-local named Nix test functions into separate derivations, reject duplicate names, and keep test dependencies out of runtime outputs. Public names remain provisional.
 - [x] **FAILURES**: proposed unit states, retained errors, reentry and no automatic retry; tested with shared dependencies and native triggers.
 - [ ] **AFTER**: native startup/deferred absence and FileType/after-ftplugin fixtures exist; add explicit user opt-in after/plugin sourcing coverage.
 

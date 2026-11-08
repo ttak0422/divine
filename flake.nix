@@ -70,10 +70,24 @@
       # TODO(API): implementation scaffolding, not a stable consumer interface.
       lib = import ./lib { lib = nixpkgs.lib; };
       tests = import ./tests { lib = nixpkgs.lib; };
+      packages = eachSystem (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          example = self.lib.mkBundle {
+            inherit pkgs;
+            configuration = import ./examples/example.nix { inherit pkgs; };
+          };
+        }
+      );
       checks = eachSystem (
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
+          exampleConfiguration = import ./examples/example.nix { inherit pkgs; };
+          exampleBundle = self.packages.${system}.example;
           eventPlans = pkgs.writeText "divine-event-plans.lua" (
             "return " + import ./tests/events.nix { inherit (pkgs) lib; }
           );
@@ -101,8 +115,35 @@
                 touch "$out"
               '';
         in
-        {
+        (import ./tests/definition-checks.nix { inherit pkgs; })
+        // (self.lib.mkChecks {
+          inherit pkgs;
+          configuration = exampleConfiguration;
+          bundle = exampleBundle;
+        })
+        // {
           pre-commit-check = hooksFor system;
+          example =
+            assert builtins.elem (toString pkgs.vimPlugins.mini-pairs) exampleBundle.graph.roots;
+            assert
+              toString exampleBundle == toString (
+                self.lib.mkBundle {
+                  inherit pkgs;
+                  configuration = exampleConfiguration;
+                }
+              );
+            pkgs.runCommand "divine-example-test" { nativeBuildInputs = [ pkgs.neovim ]; } ''
+              export HOME="$TMPDIR/home"
+              export XDG_CONFIG_HOME="$HOME/config" XDG_DATA_HOME="$HOME/data"
+              export XDG_STATE_HOME="$HOME/state" XDG_CACHE_HOME="$HOME/cache"
+              mkdir -p "$HOME"
+              nvim --headless -n -i NONE -u ${exampleBundle}/init.lua -l ${./tests/example.lua}
+              if nvim --headless -n -i NONE -u NONE -l ${./tests/example.lua} > negative.log 2>&1; then
+                echo "example smoke test unexpectedly accepted an unconfigured editor" >&2
+                exit 1
+              fi
+              touch "$out"
+            '';
           input-eval = pkgs.runCommand "divine-nix-unit-tests" { nativeBuildInputs = [ pkgs.nix-unit ]; } ''
             export HOME="$TMPDIR/home"
             mkdir -p "$HOME"

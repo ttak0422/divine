@@ -1,6 +1,7 @@
 { lib }:
 let
   suites = {
+    definitions = import ./definitions.nix { inherit lib; };
     options = import ./options.nix { inherit lib; };
     input = import ./eval.nix { inherit lib; };
     resolver = import ./resolver.nix { inherit lib; };
@@ -14,6 +15,51 @@ suites
   testSuiteDiscovery = {
     expr = builtins.mapAttrs (_: suite: builtins.attrNames suite) suites;
     expected = {
+      definitions = [
+        "testBothForms"
+        "testBothFormsEmptyPlural"
+        "testCheckValuesRemainLazy"
+        "testCompileRejectBothForms"
+        "testCompileRejectSingletonMap"
+        "testConflictingDocs"
+        "testDisjointRepeatedTests"
+        "testDocsDoNotRunChecks"
+        "testDuplicateAcrossPackages"
+        "testDuplicateDifferentFunctions"
+        "testDuplicateNested"
+        "testDuplicateNotHiddenByToolQuery"
+        "testDuplicateSameFunction"
+        "testDuplicateSingleton"
+        "testEmptyChecks"
+        "testFiniteCrossFileCycle"
+        "testModuleDiscriminatorAsName"
+        "testNamedPackageCheck"
+        "testNamedSingletonCollision"
+        "testNestedCollection"
+        "testNestedSingleton"
+        "testOptionalContext"
+        "testRejectEmptyName"
+        "testRejectNonDerivation"
+        "testRejectNonFunction"
+        "testRejectNonSet"
+        "testRejectNonStringDoc"
+        "testRejectRootSingleton"
+        "testRejectRootTestRegistry"
+        "testRejectSingletonDerivation"
+        "testRejectSingletonMap"
+        "testRepeatedDocs"
+        "testRuntimeDoesNotRunChecks"
+        "testRuntimeDoesNotRunSingleton"
+        "testSeparateOccurrenceForms"
+        "testShorthandDoesNotRepeatTests"
+        "testSingletonCollisionAcrossOutputs"
+        "testSingletonNamedCollision"
+        "testSingletonNonDerivation"
+        "testSingletonPackageCheck"
+        "testSingletonPackageName"
+        "testSingletonValuesRemainLazy"
+        "testSuppliedContext"
+      ];
       options = [
         "testAcceptOperatorPendingKeyMode"
         "testDoNotEvaluatePackageModuleMetadata"
