@@ -1,6 +1,7 @@
 { lib }:
 let
   suites = {
+    packages = import ./packages.nix { inherit lib; };
     definitions = import ./definitions.nix { inherit lib; };
     options = import ./options.nix { inherit lib; };
     input = import ./eval.nix { inherit lib; };
@@ -15,6 +16,27 @@ suites
   testSuiteDiscovery = {
     expr = builtins.mapAttrs (_: suite: builtins.attrNames suite) suites;
     expected = {
+      packages = [
+        "testBuildContextPreserved"
+        "testConflictingAfterPolicy"
+        "testExplicitDependencyLoadsBeforeGroup"
+        "testFiniteCycleDependency"
+        "testGroupDocumentation"
+        "testLazyMembersStayDeferred"
+        "testNamedChecksOnce"
+        "testNestedTools"
+        "testNoMemberStartupDefault"
+        "testOrderedMembers"
+        "testOverlappingIndependentConfigurations"
+        "testRecursivePackagesDependencies"
+        "testRejectBothForms"
+        "testRejectEmptyPackages"
+        "testRejectNonPackageMember"
+        "testRejectUnnamedTest"
+        "testSharedAfterPolicy"
+        "testSharedHooks"
+        "testSingletonSettingsRemainIndependent"
+      ];
       definitions = [
         "testBothForms"
         "testBothFormsEmptyPlural"

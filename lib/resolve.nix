@@ -132,7 +132,11 @@ let
       {
         inherit origin;
         inherit (node) definition;
-        id = key node.definition.plugin;
+        id = if node.definition ? packages then "packages:${origin}" else key node.definition.plugin;
+        dependencies = lib.imap0 (i: child:
+          if child.definition ? packages then "packages:${origin}.dependPlugins[${toString i}]"
+          else key child.definition.plugin
+        ) node.dependencies;
       }
     ]
     ++ concatLists (
@@ -140,9 +144,19 @@ let
     );
   trees = inspectDefinitions plugins;
   occurrences = concatLists (lib.imap0 (i: node: collect "plugins[${toString i}]" node) trees);
+  configurations = builtins.filter (o: o.definition ? packages) occurrences;
+  # A group member declares a package, not a singleton configuration/default.
+  packageOccurrences = builtins.filter (o: !(o.definition ? packages)) occurrences
+    ++ lib.concatMap (o: lib.imap0 (i: package: {
+      id = key package;
+      origin = "${o.origin}.packages[${toString i}]";
+      definition.plugin = package;
+      dependencies = [ ];
+      memberOnly = true;
+    }) o.definition.packages) configurations;
   groups = foldl' (
     acc: occurrence: acc // { ${occurrence.id} = (acc.${occurrence.id} or [ ]) ++ [ occurrence ]; }
-  ) { } occurrences;
+  ) { } packageOccurrences;
 
   /**
     Collect named tests without comparing functions or evaluating their bodies.
@@ -209,6 +223,7 @@ let
           fields = lib.filterAttrs (name: value: name != "lazy" || value != null) (
             builtins.removeAttrs occurrence.definition [
               "plugin"
+              "packages"
               "dependPlugins"
               "extraPackages"
               "test"
@@ -252,17 +267,20 @@ let
         lazy = false;
       }
       // (mergeSettings id declarations).values;
-      dependencies = concatLists (
-        map (
-          o:
-          map (entry: key (if lib.isDerivation entry then entry else entry.plugin)) (
-            o.definition.dependPlugins or [ ]
-          )
-        ) declarations
-      );
+      dependencies = concatLists (map (o: o.dependencies) declarations);
+      afterDeclarations = declarations ++ builtins.filter (o:
+        builtins.elem id (map key o.definition.packages)
+      ) configurations;
+      afterSettings = lib.unique (map (o: o.definition.loadAfter)
+        (builtins.filter (o: o.definition ? loadAfter) afterDeclarations));
+
     in
     {
-      inherit id settings;
+      inherit id;
+      settings = settings // lib.optionalAttrs (afterSettings != [ ]) {
+        loadAfter = if builtins.length afterSettings == 1 then builtins.head afterSettings
+          else fail "conflicting loadAfter policies for '${id}' across package units";
+      };
       package = (builtins.head declarations).definition.plugin;
       placement = "opt";
       dependencies = sortedUnique dependencies;
@@ -272,7 +290,23 @@ let
       origins = map (o: o.origin) declarations;
     }
   ) groups;
-  ids = attrNames nodes;
+  configurationNodes = listToAttrs (map (o: {
+    name = o.id;
+    value = {
+      inherit (o) id dependencies;
+      # Duplicate packages are harmless: retain the first declaration position.
+      members = lib.unique (map key o.definition.packages);
+      settings = { lazy = false; } // (mergeSettings o.id [ o ]).values;
+      origins = [ o.origin ];
+      extraPackages = packageSet "extraPackages for '${o.id}'" (o.definition.extraPackages or [ ]);
+    };
+  }) configurations);
+  vertices = mapAttrs (id: node: node // {
+    members = [ id ];
+    # Membership alone must not seed a second startup load before group preConfig.
+    startup = lib.any (o: !(o.memberOnly or false)) groups.${id} && !node.settings.lazy;
+  }) nodes // mapAttrs (_: node: node // { startup = !node.settings.lazy; }) configurationNodes;
+  ids = attrNames vertices;
 
   /**
     Find all reachable identifiers, including starts, without revisiting cycles.
@@ -301,7 +335,7 @@ let
         map (other: {
           name = other;
           value = true;
-        }) (closure (n: nodes.${n}.dependencies) [ id ])
+        }) (closure (n: vertices.${n}.dependencies) [ id ])
       );
     }) ids
   );
@@ -345,11 +379,13 @@ let
       {
         name = id;
         value = {
-          inherit id members;
+          inherit id;
+          members = lib.unique (lib.concatMap (member: vertices.${member}.members) members);
+          configurations = members;
           dependencies = builtins.filter (other: other != id) (
-            sortedUnique (lib.concatMap (member: map (d: owner.${d}) nodes.${member}.dependencies) members)
+            sortedUnique (lib.concatMap (member: map (d: owner.${d}) vertices.${member}.dependencies) members)
           );
-          cyclic = builtins.length members > 1 || builtins.elem id nodes.${id}.dependencies;
+          cyclic = builtins.length members > 1 || builtins.elem id vertices.${id}.dependencies;
         };
       }
     ) components.values
@@ -359,7 +395,7 @@ let
     if sorted ? result then sorted.result else fail "internal error: SCC condensation is cyclic";
   startupSeeds = sortedUnique (
     map (id: owner.${id}) (
-      builtins.filter (id: nodes.${id}.settings ? lazy && nodes.${id}.settings.lazy == false) ids
+      builtins.filter (id: vertices.${id}.startup) ids
     )
   );
   startupClosure = closure (id: unitsById.${id}.dependencies) startupSeeds;
@@ -372,13 +408,13 @@ let
     tools = map key node.extraPackages;
   }) nodes;
   rootTools = packageSet "root extraPackages" extraPackages;
-  tools = packageSet "extraPackages" (rootTools ++ lib.concatMap (id: nodes.${id}.extraPackages) ids);
+  tools = packageSet "extraPackages" (rootTools ++ lib.concatMap (id: vertices.${id}.extraPackages) ids);
 in
 deepSeq (attrNames tests) (
   deepSeq validation (
     deepSeq (map key tools) {
-      inherit nodes units tests;
-      roots = lib.unique (map (node: key node.definition.plugin) trees);
+      inherit nodes units tests configurationNodes;
+      roots = lib.unique (lib.imap0 (i: node: if node.definition ? packages then "packages:plugins[${toString i}]" else key node.definition.plugin) trees);
       startupUnits = map (unit: unit.id) (builtins.filter (unit: unit.startup) units);
       extraPackages = tools;
       metadata = builtins.removeAttrs request [

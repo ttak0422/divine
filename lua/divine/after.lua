@@ -5,7 +5,7 @@ local M = {}
 local function canonical(path) return vim.uv.fs_realpath(path) or vim.fn.fnamemodify(path, ":p") end
 
 -- Keep attempts as well as successful sources: partially executed files must
--- not be retried through a second unit or a later startup fallback.
+-- not be retried through a second unit or a later load attempt.
 ---@type table<string, boolean>
 local attempted = {}
 

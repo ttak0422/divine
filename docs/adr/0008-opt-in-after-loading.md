@@ -21,35 +21,50 @@ branch. The implementation and names below are proposed, not accepted API.
 ## Considered Options
 
 - Keep explicit per-target manual sourcing/custom load operations only.
-- Provide a per-definition opt-in that supplements native directory-specific
-  behavior without changing default loading.
+- Provide a per-definition opt-in with a VimEnter fallback that supplements native
+  startup scanning. This was the previous implementation; startup config preceded
+  after/plugin completion.
+- Isolate opted-in after/plugin files in the generated runtime and source their
+  originals synchronously before config at both startup and deferred load time.
 
 ## Decision Outcome
 
-Proposed option: explicit `loadAfter = true`, because it removes repeated
-per-plugin loader code while retaining the established default. It sources late
-after/plugin scripts after ordinary unit loads and before configuration, and
-registers after/ftdetect when detection is already initialized.
+Proposed option: explicit `loadAfter = true` with uniform synchronous timing.
+The bundle creates an opt runtime view that links package content except for
+`after/plugin`. The original package derivation and output stay unchanged.
+After ordinary unit loads, the runtime sources opted-in original after/plugin
+scripts before configuration, at startup as well as during deferred loading.
+This replaces the VimEnter fallback and also covers initial-buffer FileType,
+command-line loading and disabled native plugin scanning.
 
-During startup, only after/plugin sourcing is deferred to a VimEnter fallback.
-Normal loading and configuration remain synchronous. Canonical source history
-prevents repeating files already sourced by the native scan, including scripts
-that threw. The fallback covers initial-buffer and command-line loading that
-occurs after the native scan but before VimEnter. Filetype, indent and syntax
-continue to use native lookup; runtimePaths ordinary entries precede after
-entries.
+Canonical source history and attempted-file tracking prevent repeating earlier
+sources, including symlink aliases and files that threw. An after-script error
+fails the unit immediately, skips remaining configuration and is retained without
+retry. Startup setup propagates such a failure; there is no delayed failure after
+configuration has already run.
+
+Only after/plugin is hidden. Filetype, indent, syntax and other runtime assets
+remain available through native lookup. Late after/ftdetect is sourced when
+detection is already initialized, otherwise native initialization discovers it.
+This registers rules without redetecting buffers. runtimePaths ordinary entries
+precede after entries and are not isolated by the per-package opt-in.
 
 ### Consequences
 
 - Positive: existing configurations retain default packadd behavior. Explicit
   opt-in works for packages such as cmp-buffer without an external loader.
-- Positive: startup scripts are not sourced twice by divine and the native scan;
-  late detection rules can be registered without sourcing unrelated after files.
-- Negative: during startup, config and first-trigger handoff precede after/plugin
-  completion. The opt-in does not provide uniform post-after configuration timing.
-- Negative: source history cannot report native source failures to divine's unit
-  state. Native reloads and arbitrary custom Lua execution remain outside the
-  deduplication guarantee. There is no rollback or automatic retry.
+- Positive: config and first-trigger handoff follow successful after/plugin work
+  regardless of load time, without a later native scan repeating managed files.
+  Late detection rules can be registered without sourcing unrelated after files.
+- Negative: the generated view differs from the original package layout. Scripts
+  are sourced from the original output path; plugins that infer sibling paths
+  from script filenames or expect after/plugin in runtimepath need compatibility
+  checks. Adding original package paths through another loader bypasses isolation.
+- Negative: ordinary unguarded plugin scripts can still run again during native
+  startup scanning. Source history cannot report earlier custom/native source
+  failures to divine's unit state. Native reloads and arbitrary custom Lua
+  execution remain outside the deduplication guarantee. There is no rollback or
+  automatic retry.
 
 ## Implementation evidence and review
 

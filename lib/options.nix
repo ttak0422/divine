@@ -44,6 +44,10 @@ let
       type = package;
       description = "The plugin package; output path determines graph identity.";
     };
+    packages = mkOption {
+      type = types.addCheck (types.listOf package) (values: values != [ ]);
+      description = "Ordered packages sharing one load lifecycle and configuration; alternative to plugin.";
+    };
     lazy = mkOption {
       type = types.nullOr types.bool;
       default = null;
@@ -85,7 +89,7 @@ let
     };
     loadAfter = mkOption {
       type = types.bool;
-      description = "Explicitly load after/plugin and initialized after/ftdetect scripts; startup after/plugin stays in the native phase.";
+      description = "Explicitly load after/plugin and initialized after/ftdetect scripts; after/plugin completes before configuration at startup and on deferred loading.";
     };
     onEvents = mkOption {
       type = conditions;
@@ -249,12 +253,16 @@ let
     let
       raw = if lib.isDerivation entry then { plugin = entry; } else entry;
       value =
-        if builtins.isAttrs raw && raw ? test && raw ? tests then
+        if !builtins.isAttrs raw || (raw ? plugin) == (raw ? packages) then
+          throw "divine input: use exactly one of plugin and nonempty packages"
+        else if raw ? packages && raw ? test then
+          throw "divine input: packages definitions require explicitly named tests"
+        else if builtins.isAttrs raw && raw ? test && raw ? tests then
           throw "divine input: a definition cannot contain both test and tests"
         else if builtins.isAttrs raw && raw ? test && !builtins.isFunction raw.test then
           throw "divine input: test must be a function; use tests.<name> for named checks"
         else
-          evaluate definitionOptions [ "plugin" "lazy" ] raw;
+          evaluate definitionOptions [ (if raw ? packages then "packages" else "plugin") "lazy" ] raw;
     in
     value
     // lib.optionalAttrs (value ? dependPlugins) {

@@ -241,11 +241,15 @@ For targets loaded with `packadd` during `init`, the `after/` directory is added
 to the end of `runtimepath`. If normal plugin loading is enabled, Neovim's later
 standard `after/plugin` loading phase handles it. A custom operation that also
 sources it during `init` could execute it twice and is therefore not the default.
-The explicit mechanism preserves this native phase and only supplements missing
-scripts at `VimEnter`. After startup it sources opted-in scripts after all ordinary
-load operations in the unit, before configuration.
-After-load configuration runs when the load operation returns; it does not
-guarantee that all standard `after/plugin` loading has completed.
+The explicit mechanism instead isolates managed `after/plugin` files from the
+generated opt runtime view and sources the original files after all ordinary
+load operations in the unit, before configuration. This sequence is synchronous
+at startup and during deferred loading; it does not defer work to `VimEnter`.
+Other after runtime files remain visible, and default packages keep their native
+startup behavior. Ordinary unguarded `plugin` scripts can still be rescanned by
+Neovim; the opt-in does not suppress global plugin loading.
+Without explicit `loadAfter`, after-load configuration runs when the load
+operation returns and does not guarantee completion of native `after/plugin`.
 
 `after/ftplugin` follows a separate path: runtime lookup of `ftplugin` files for
 `FileType`. Neither `packadd` nor after-load configuration is specified to execute

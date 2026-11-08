@@ -122,6 +122,11 @@ end)
 T["loads ftplugin indent and syntax overrides through native FileType replay"] = case(function(f)
   vim.cmd("filetype plugin indent on")
   vim.cmd("syntax on")
+  f.write("ft", "plugin/main.lua", { "vim.g.ft_loaded = true" })
+  f.write("ft", "after/plugin/main.lua", {
+    "assert(vim.g.ft_loaded)",
+    "vim.g.ft_after = (vim.g.ft_after or 0) + 1",
+  })
   f.write("ft", "ftplugin/divineexample.lua", { "vim.b.ft_value = 'base'" })
   f.write("ft", "after/ftplugin/divineexample.lua", { "vim.b.ft_value = 'after'" })
   f.write("ft", "indent/divineexample.lua", { "vim.bo.shiftwidth = 2" })
@@ -129,7 +134,14 @@ T["loads ftplugin indent and syntax overrides through native FileType replay"] =
   f.write("ft", "syntax/divineexample.lua", { "vim.b.syntax_value = 'base'" })
   f.write("ft", "after/syntax/divineexample.lua", { "vim.b.syntax_value = 'after'" })
   require("divine").setup({
-    nodes = { ft = { name = "ft", triggers = { filetypes = { "divineexample" } } } },
+    nodes = {
+      ft = {
+        name = "ft",
+        after_path = f.root .. "/pack/divine/opt/ft/after",
+        triggers = { filetypes = { "divineexample" } },
+        after = function() assert(vim.g.ft_after == 1) end,
+      },
+    },
     units = { { id = "ft", members = { "ft" }, dependencies = {} } },
   })
   for _ = 1, 2 do

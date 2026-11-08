@@ -1,6 +1,6 @@
 ---
 status: proposed
-date: 2026-11-07
+date: 2026-11-08
 discussion: "https://github.com/ttak0422/divine/pull/1"
 ---
 
@@ -11,7 +11,7 @@ discussion: "https://github.com/ttak0422/divine/pull/1"
 Every member of a cyclic load unit must be available before associated
 configuration runs. The graph's stable member list is not a dependency order
 inside a cycle. Startup and deferred targets must share the same loading flow
-and remain in opt, without automatic after/plugin sourcing.
+and remain in opt, without automatic after/plugin sourcing by default.
 
 ## Considered Options
 
@@ -31,6 +31,12 @@ Load prerequisite units first. Keep successful units loaded and failed units
 failed; do not automatically retry partial effects. Reentry is allowed only
 once every member runtime is prepared. A per-member replacement load function
 can replace ordinary packadd, but not the common preparation phase.
+
+The separate [after-directory proposal](0008-opt-in-after-loading.md) inserts
+explicit `loadAfter` work after all ordinary loads and before configuration,
+using the same synchronous sequence at startup and during deferred loading.
+Its generated runtime view hides only opted-in `after/plugin` from native scans;
+other after directories retain their own native lookup semantics.
 
 ### Consequences
 
