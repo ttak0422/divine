@@ -310,3 +310,9 @@ builds real nvim-cmp/cmp-buffer bundles and verifies exactly one buffer-source
 registration inside config at startup and after startup, alongside runtimePaths
 ordering, initial-file overrides, after/ftdetect and generated-view preservation
 of other runtime assets. This is focused coverage, not a general completion-plugin claim.
+
+For overlapping explicit package groups, reentry into a different group while a
+shared package's ordinary loader is still running fails rather than reporting
+premature configuration success. Reentry into the same already-prepared unit
+retains the existing SCC behavior. Physical load failures remain sticky across
+overlapping units; ordinary configuration failures belong to their own unit.

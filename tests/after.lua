@@ -50,6 +50,81 @@ T["retains after-plugin failure and skips config without retry"] = case(function
   assert(not pcall(controller.load, "failure") and vim.g.attempts == 1)
 end)
 
+T["retains only the failed after script across overlapping configurations"] = case(function(f)
+  f.write("a", "after/plugin/main.lua", { "vim.g.a_attempts = (vim.g.a_attempts or 0) + 1" })
+  f.write("b", "after/plugin/main.lua", {
+    "vim.g.b_attempts = (vim.g.b_attempts or 0) + 1",
+    "error('overlapping after failed')",
+  })
+  local controller = require("divine").setup({
+    nodes = {
+      a = { name = "a", after_path = f.root .. "/pack/divine/opt/a/after" },
+      b = { name = "b", after_path = f.root .. "/pack/divine/opt/b/after" },
+    },
+    configurations = {
+      first = {
+        members = { "a", "b" },
+        after = function() error("failed group must not configure") end,
+      },
+      second = { members = { "a" }, after = function() vim.g.a_configured = true end },
+      third = { members = { "b" }, after = function() error("failed package must not configure") end },
+    },
+    units = {
+      { id = "first", members = { "a", "b" }, configurations = { "first" }, dependencies = {} },
+      { id = "second", members = { "a" }, configurations = { "second" }, dependencies = {} },
+      { id = "third", members = { "b" }, configurations = { "third" }, dependencies = {} },
+    },
+  })
+  local ok, err = pcall(controller.load, "first")
+  assert(not ok and err:find("overlapping after failed", 1, true))
+  controller.load("second")
+  assert(vim.g.a_configured and controller.states.second == "loaded")
+  ok, err = pcall(controller.load, "third")
+  assert(not ok and err:find("overlapping after failed", 1, true))
+  assert(controller.states.first == "failed" and controller.states.third == "failed")
+  assert(vim.g.a_attempts == 1 and vim.g.b_attempts == 1)
+end)
+
+T["rejects overlapping configuration while its shared after script is still loading"] = case(function(f)
+  f.write("shared", "after/plugin/main.lua", {
+    "vim.g.attempts = (vim.g.attempts or 0) + 1",
+    "_G.divine_after_controller.load('second')",
+  })
+  local controller = require("divine").setup({
+    nodes = {
+      shared = { name = "shared", after_path = f.root .. "/pack/divine/opt/shared/after" },
+    },
+    configurations = {
+      first = { members = { "shared" } },
+      second = { members = { "shared" }, after = function() vim.g.configured = true end },
+    },
+    units = {
+      { id = "first", members = { "shared" }, configurations = { "first" }, dependencies = {} },
+      { id = "second", members = { "shared" }, configurations = { "second" }, dependencies = {} },
+    },
+  })
+  _G.divine_after_controller = controller
+  local ok, err = pcall(controller.load, "first")
+  assert(not ok and err:find("reentry while after script is still loading", 1, true))
+  assert(controller.states.first == "failed" and controller.states.second == "failed")
+  assert(not vim.g.configured and vim.g.attempts == 1)
+end)
+
+T["rethrows a retained after failure through a symlink without retry"] = case(function(f)
+  f.write("failure", "after/plugin/main.lua", {
+    "vim.g.attempts = (vim.g.attempts or 0) + 1",
+    "error('canonical after failed')",
+  })
+  local root = f.root .. "/pack/divine/opt/failure"
+  assert(vim.uv.fs_symlink(root, f.root .. "/alias"))
+  local after = require("divine.after")
+  local ok, original = pcall(after.plugins, { root .. "/after" })
+  assert(not ok and original:find("canonical after failed", 1, true))
+  local repeated
+  ok, repeated = pcall(after.plugins, { f.root .. "/alias/after" })
+  assert(not ok and repeated == original and vim.g.attempts == 1)
+end)
+
 T["does not source an after script already loaded through a symlink"] = case(function(f)
   f.write("custom", "after/plugin/space name.lua", { "vim.g.count = (vim.g.count or 0) + 1" })
   local root = f.root .. "/pack/divine/opt/custom"

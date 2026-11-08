@@ -102,6 +102,45 @@ definitions once and use their packages for back-references. Avoid recursively
 embedding full definitions in each other, which creates an infinite Nix value.
 See [dependency resolution](resolution.md) for identity and SCC behavior.
 
+## Share configuration across ordered packages
+
+A definition can use `packages` instead of `plugin` when one config needs several
+packages loaded in order. For example:
+
+```nix
+{
+  packages = [
+    pkgs.vimPlugins.nvim-cmp
+    pkgs.vimPlugins.cmp-buffer
+  ];
+  loadAfter = true;
+  config = # lua
+    ''
+      require("cmp").setup({ sources = { { name = "buffer" } } })
+    '';
+}
+```
+
+This prepares both runtimes, loads their scripts in order, sources opted-in
+after/plugin scripts, then runs shared config. Startup is the default. Add
+`lazy = true` and a trigger for deliberate deferral. `packages` is nonempty and
+contains derivations only; put nested definitions in `dependPlugins`. Repeated
+package outputs retain their first position.
+
+Each declaration owns independent hooks even when its packages overlap another
+one. Physical loading is shared, so an earlier load is not repeated or reordered
+by a later group. A custom `load` receives each not-yet-loaded package's opt name;
+its first loader wins. Explicit conflicting `loadAfter` policies for a shared
+output fail; true applies across all its configurations.
+
+A shorthand dependency on one member does not select the shared config. Place
+the full packages definition in `dependPlugins` when that config must run first.
+Copying a definition into several locations creates several configuration
+occurrences, not a reusable identity. Internal location-derived IDs are not a
+stable public interface. Use `tests.<name>`, not `test`, because a group has no
+unique package-derived test name. The existing global test-name uniqueness rule
+still applies. See [ADR 0009](adr/0009-ordered-package-units.md) for review status.
+
 ## Inline documentation
 
 `doc` is an optional string on each detailed plugin definition, including nested

@@ -44,10 +44,9 @@ let
               '';
           }
           {
-            plugin = pkgs.vimPlugins.cmp-buffer;
+            packages = [ pkgs.vimPlugins.nvim-cmp pkgs.vimPlugins.cmp-buffer ];
             inherit lazy;
             loadAfter = true;
-            dependPlugins = [ pkgs.vimPlugins.nvim-cmp ];
             config = # lua
               ''
                 local count = 0
@@ -90,9 +89,9 @@ let
             assert(vim.b.divine_fixture_ftplugin and vim.b.divine_fixture_syntax)
             assert(vim.bo.shiftwidth == 7)
             assert(count() == ${if lazy then "0" else "1"})
-            controller.load("${pkgs.vimPlugins.cmp-buffer}")
+            controller.load("packages:plugins[1]")
             assert(count() == 1 and vim.g.divine_cmp_config)
-            controller.load("${pkgs.vimPlugins.cmp-buffer}")
+            controller.load("packages:plugins[1]")
             assert(count() == 1, "cmp-buffer must register only once")
             vim.cmd.edit(vim.fn.fnameescape(vim.env.HOME .. "/new.divinefixture"))
             assert(vim.bo.filetype == "divinefixture")

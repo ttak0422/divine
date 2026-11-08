@@ -68,6 +68,8 @@ function M.setup(plan)
   local definitions = vim.tbl_extend("error", {}, plan.nodes, plan.configurations or {})
   ---@type table<divine.NodeId, boolean>, table<divine.NodeId, boolean>, table<divine.NodeId, string>
   local prepared, loaded, package_errors = {}, {}, {}
+  ---@type table<divine.NodeId, boolean>
+  local loading = {}
   ---@class divine.Controller: divine.TriggerController
   ---@field states table<divine.UnitId, divine.UnitState>
   ---@field errors table<divine.UnitId, string> Failure messages exist only for failed units.
@@ -108,6 +110,7 @@ function M.setup(plan)
       end
       for _, member in ipairs(unit.members) do
         if package_errors[member] then error(package_errors[member], 0) end
+        assert(not loading[member], "divine: reentry while shared package is loading: " .. member)
         if not prepared[member] then
           vim.cmd.packadd({ plan.nodes[member].name, bang = true })
           prepared[member] = true
@@ -130,16 +133,18 @@ function M.setup(plan)
         for _, member in ipairs(definition.members or { configuration_id }) do
           if package_errors[member] then error(package_errors[member], 0) end
           if not loaded[member] then
-            -- Mark before entry so a package script requiring an overlapping
-            -- prepared unit cannot recursively source itself.
-            loaded[member] = true
+            -- A different configuration cannot finish while this physical
+            -- load is still executing. Same-unit prepared reentry returns above.
+            loading[member] = true
             local success, message = xpcall(function()
               (definition.load or vim.cmd.packadd)(plan.nodes[member].name)
             end, debug.traceback)
+            loading[member] = nil
             if not success then
               package_errors[member] = message
               error(message, 0)
             end
+            loaded[member] = true
           end
         end
       end

@@ -7,7 +7,10 @@ return {
     "leaves after-ftdetect to later native initialization",
     "loads after-ftdetect when detection is already initialized",
     "loads ftplugin indent and syntax overrides through native FileType replay",
+    "rejects overlapping configuration while its shared after script is still loading",
     "retains after-plugin failure and skips config without retry",
+    "retains only the failed after script across overlapping configurations",
+    "rethrows a retained after failure through a symlink without retry",
     "sources opted-in SCC after scripts after all ordinary plugins and before config",
   },
   ["tests/runtime.lua"] = {
@@ -19,8 +22,13 @@ return {
     "stops before loading when before fails",
   },
   ["tests/runtime-plan.lua"] = {
+    "isolated plan / deduplicates physical loads across independent overlapping configurations",
+    "isolated plan / keeps singleton configuration separate from package group membership",
+    "isolated plan / loads ordered package groups with shared hooks and external dependencies first",
+    "isolated plan / retains shared package failures across overlapping configurations",
     "isolated plan / loads explicit startup units before activating triggers",
     "isolated plan / prepares SCC members before configuration and loads shared dependencies once",
+    "isolated plan / rejects cross-group reentry before shared physical loading completes",
     "isolated plan / rejects reentry before runtime preparation",
     "isolated plan / rejects unknown manual node and unit identifiers without loading",
     "isolated plan / retains after failures without automatic retry",
@@ -30,6 +38,7 @@ return {
     "isolated plan / retains prerequisite and dependent failures",
     "isolated plan / supports an empty compiled plan",
     "isolated plan / uses the custom load hook between before and after",
+    "native opt tree / hands the first command to an ordered group after shared configuration",
     "native opt tree / prepares peer modules before SCC callbacks without sourcing after-plugin",
   },
   ["tests/triggers.lua"] = {

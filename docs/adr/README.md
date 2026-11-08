@@ -81,3 +81,5 @@ The `lazy = false` default is specified separately in the design requirements.
 - [0007: Use mini.test for Lua behavior tests](0007-use-mini-test.md) (`accepted`).
 
 - [0008: Supplement after directories through explicit opt-in](0008-opt-in-after-loading.md) (`proposed`).
+
+- [0009: Configure ordered packages as independent units](0009-ordered-package-units.md) (`proposed`).

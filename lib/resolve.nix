@@ -405,6 +405,7 @@ let
   validation = mapAttrs (_: node: {
     fields = attrNames node.settings;
     inherit (node) dependencies;
+    loadAfter = node.settings.loadAfter or false;
     tools = map key node.extraPackages;
   }) nodes;
   rootTools = packageSet "root extraPackages" extraPackages;

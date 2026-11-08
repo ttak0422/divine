@@ -39,7 +39,8 @@ This needs no additional reference field and does not construct an infinitely
 recursive Nix value. Both detailed definitions and deeper nested dependencies
 remain valid. Directly cyclic Nix values are outside the finite-input contract.
 This package-level identity/reference rule does not select the identity, grouping
-or schema of reusable configuration units or a possible multi-package interface.
+or schema of reusable configuration units. The separate multi-package proposal
+below does not amend ADR 0001.
 
 ## Explicit versus package dependencies
 
@@ -51,7 +52,7 @@ resolver does not remove build inputs, propagated inputs or package metadata.
 This loading boundary is a requirement in [design.md](design.md#package-dependency-metadata),
 not an acceptance of the provisional repeated-definition or timing policies below.
 
-## Identity and repeated definitions
+## Singleton identity and repeated definitions
 
 - **Identity (accepted):** the package's output path, not its display name, within
   one resolved graph. Distinct outputs remain distinct even if their names match.
@@ -91,15 +92,61 @@ and retained provenance remain the ADR 0002 proposal. Public names and any
 configuration-unit or multi-package API also remain open; they are not accepted
 as a side effect of the package-node decision.
 
+## Ordered package configuration occurrences
+
+The provisional `packages = [ a b ];` form is an alternative to `plugin = a;`,
+not an additional field. It takes a nonempty derivation list, retaining the first
+position of repeated output paths. Definitions inside the list are invalid; put
+recursive definitions in `dependPlugins`, at roots or any dependency depth.
+
+A packages declaration owns one shared `preConfig`, `config`, timing and trigger
+set. Each occurrence is distinct even when another has the same package list or
+identical settings. Unlike singleton declarations, those occurrences do not
+merge settings by package identity. Internal IDs are derived from composed input
+locations and may change when imports or list positions change; they are not
+stable public references. See [ADR 0009](adr/0009-ordered-package-units.md), which
+remains proposed independently of accepted physical output-path identity.
+
+`dependPlugins` units load before the group. Every member runtime is prepared
+before shared preConfig runs once. Each physical package not already loaded by
+the controller then loads in declared order, followed by opted-in after/plugin
+in that order and shared config once. Overlap does not rerun physical scripts,
+but each configuration keeps its own hooks. A custom group `load` receives each
+not-yet-loaded package's opt name; the first physical loader wins. An earlier
+load can therefore override the later group's intended physical order or load
+hook, without skipping its shared config. Native ordinary startup rescans are
+not controlled by this deduplication.
+
+A package shorthand dependency or manual controller `load(package_path)` selects
+the singleton configuration, not the groups containing that package. Include a
+full packages definition in `dependPlugins` when its shared config is required.
+Copying it into another location creates another configuration occurrence; it
+is not a finite group reference. Existing singleton finite cycles remain valid.
+
+`loadAfter` is the exception to independent group settings: it controls physical
+runtime isolation. Any explicit true applies to that output's loads through all
+configurations. Omission is unspecified, while conflicting explicit true/false
+values across singleton/group occurrences fail. Other shared settings do not
+become settings on each member. Membership alone does not create an additional
+singleton startup demand ahead of group preConfig.
+
+Groups use explicit `tests.<name>` because `test` has no unique package name.
+Test names remain globally unique, and group `doc` belongs to its occurrence.
+Global and recursive external tools still form a deduplicated output-path union.
+
 ## SCCs and DAG order
 
 Reachability uses Nix's cycle-safe `genericClosure`. Mutually reachable nodes
 form SCCs, including singleton self-dependencies. SCCs are condensed into a DAG
 and topologically ordered with prerequisites before their dependents.
 
-Unit IDs use their smallest member output path. Independent units and member
-lists are deterministic by path. A member list is not an executable order of
-configuration callbacks within a cycle: runtime integration must prepare every
+The SCC graph contains singleton and group configuration vertices. Unit IDs use
+the smallest configuration vertex ID; singleton-only graphs keep their existing
+output-path IDs and ordering. Units retain configuration IDs separately from
+flattened physical member IDs. Physical members follow first occurrence across
+the configuration order, preserving each group's declared order where not
+already encountered. The SCC configuration order is deterministic, not a
+user-specified order inside a cycle: runtime integration must prepare every
 member's runtime before the unit's related configuration. That integration is now implemented with proposed phased sequencing, documented in [runtime.md](runtime.md). The within-unit policy still needs review.
 
 The simple reachability representation uses quadratic space in the worst case.
@@ -108,8 +155,10 @@ and replace it with a more compact SCC algorithm if necessary.
 
 ## Startup demand and opt placement
 
-Every node is marked `placement = "opt"`, including explicitly non-delayed ones.
-A resolved `lazy = false` (including the default) makes its SCC a startup demand. That demand propagates
+Every physical node is marked `placement = "opt"`, including explicitly
+non-delayed ones. A singleton declaration or group configuration with resolved
+`lazy = false` (including the default) makes its SCC a startup demand; physical
+membership alone does not create an extra singleton startup demand. That demand propagates
 through the unit's prerequisites. A deferred dependency can therefore be required
 at startup by a non-delayed parent, without changing its declared `lazy` value.
 This dependency-demand rule is a review choice, not timing-field inheritance.
@@ -130,8 +179,8 @@ inferred plugin API or a replacement for Nix's own build dependency closure.
 
 Malformed input and conflicting metadata error before a caller can extract a
 partial tool list and overlook an invalid graph. The output contains `nodes`,
-ordered `units`, `roots`, `startupUnits`, `extraPackages` and
-root `metadata` and collected `tests`; these names are internal prototype structure.
+`configurationNodes` for groups, ordered `units`, `roots`, `startupUnits`,
+`extraPackages`, root `metadata` and collected `tests`; these names are internal prototype structure.
 
 Pure evaluation tests cover shorthand, detailed/nested input, diamonds, sharing,
 dependency-first order, cycles, self-dependencies, repeated and conflicting
