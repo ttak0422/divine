@@ -1,5 +1,15 @@
 -- Intentional inventory: update explicitly when adding or removing a scenario.
 return {
+  ["tests/after.lua"] = {
+    "does not repeat a later sibling sourced by an after script",
+    "does not source an after script already loaded through a symlink",
+    "keeps additional normal runtime trees before every after directory",
+    "leaves after-ftdetect to later native initialization",
+    "loads after-ftdetect when detection is already initialized",
+    "loads ftplugin indent and syntax overrides through native FileType replay",
+    "retains after-plugin failure and skips config without retry",
+    "sources opted-in SCC after scripts after all ordinary plugins and before config",
+  },
   ["tests/runtime.lua"] = {
     "does not run after when loading fails",
     "propagates after failures without undoing the load",

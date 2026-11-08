@@ -1,10 +1,10 @@
 # Executable runtime prototype
 
 The compiler, bundle and runtime connect the existing graph to Neovim. These are
-provisional implementation interfaces, not accepted public API decisions. All
-existing ADRs remain proposed; [0005](adr/0005-scc-runtime-phases.md) records the
-new SCC sequencing choice. The behavior boundaries in [design.md](design.md)
-still apply.
+provisional implementation interfaces, not accepted public API decisions.
+[0005](adr/0005-scc-runtime-phases.md) records SCC sequencing, and
+[0008](adr/0008-opt-in-after-loading.md) records after-directory handling.
+The behavior boundaries in [design.md](design.md) still apply.
 
 ## Compile and build
 
@@ -40,8 +40,10 @@ configuration, loads startup units, then installs remaining key triggers and
 handles already-open filetypes. This lets startup configuration set mapleader
 before lazy keys are expanded, while require/command triggers already work.
 `runtimePaths` accepts paths or package outputs for additional runtime trees;
-existing `after` subdirectories are added separately. It does not source an
-entire `after` directory.
+ordinary trees are added before the after section, and existing `after`
+subdirectories are appended in declaration order. This keeps a later ordinary
+tree from overriding an earlier after tree. Existing paths are not duplicated.
+It does not source an entire `after` directory.
 
 The `lazy` option defaults to `false`, including package shorthand and recursive
 detailed definitions. The resolver applies this default after merging repeated
@@ -59,7 +61,7 @@ otherwise eager dependencies. Retain existing triggers; do not add flags to
 everyday editing plugins that should now load at startup.
 
 Supported provisional fields are `lazy`, `preConfig`, `config`, `load`,
-`onEvents`, `onCommands`, `onFiletypes`, `onKeys`, and `onModules` in each definition;
+`loadAfter`, `onEvents`, `onCommands`, `onFiletypes`, `onKeys`, and `onModules` in each definition;
 `startupConfig` and `runtimePaths` are root metadata. Unknown fields fail instead
 of being silently ignored. `preConfig`, `config` and `startupConfig` accept Lua
 text or a path to a Lua source file. Optional `load` is a Lua function body with
@@ -75,7 +77,8 @@ For each requested unit, the runtime first loads prerequisite units. It then:
 2. Removes that unit's trigger stubs.
 3. Runs all member `preConfig` callbacks.
 4. Runs ordinary `packadd` (or each explicit replacement load function).
-5. Runs all member `config` callbacks.
+5. Processes explicit `loadAfter` work, if any, as described below.
+6. Runs all member `config` callbacks.
 
 The deterministic member order is provisional and is not a dependency order
 inside the cycle. Preparation precedes all callbacks, so a pre-load callback can
@@ -110,8 +113,74 @@ unguarded native behavior explicitly. Load callbacks themselves are not repeated
 
 The native startup `after/plugin` phase still runs. After-load configuration
 executes before that later phase. Deferred loading after startup does not source
-`after/plugin`; users may opt into specific work through their own configuration.
+`after/plugin` by default. The explicit mechanism below supplements it.
 `after/ftplugin` belongs to the separate FileType path.
+
+## After directories
+
+`config` is a Lua callback after the load operation, not an `after/` directory.
+The provisional per-definition `loadAfter = true` explicitly opts into loading
+package `after/plugin` and late `after/ftdetect` scripts. It works at roots and
+recursive dependencies, with startup or deferred targets, and with an explicit
+`load` callback. Omission leaves the existing native `packadd` behavior unchanged.
+Repeated definitions use the existing equality/conflict policy: omission does
+not conflict with `true`, but explicit `true` and `false` do.
+
+```nix
+{
+  plugin = pkgs.vimPlugins.cmp-buffer;
+  lazy = true;
+  loadAfter = true;
+  onEvents = "InsertEnter";
+  dependPlugins = [ pkgs.vimPlugins.nvim-cmp ];
+}
+```
+
+This registers cmp-buffer's source from its `after/plugin` script. Configure
+nvim-cmp separately as needed; this example only demonstrates loading.
+
+- **After startup:** source each opted-in member's `after/plugin/**/*.vim`, then
+  `*.lua`, in member/directory order after all ordinary unit loads and before any
+  `config` callback. Nested files are included. There is no batch source of other
+  after directories.
+- **During startup:** keep load and config synchronous and leave the native
+  after/plugin phase alone. At `VimEnter`, source only files not already recorded
+  by Neovim's source history. This also covers `--noplugin`, and packages loaded
+  by initial-buffer events or `-c` commands after native scanning has finished.
+  Config and the first triggering operation still run **before** this fallback;
+  they must not depend on after/plugin work having completed. The fallback allows
+  nested events, so commands in after scripts can emit events such as ColorScheme
+  and activate other lazy targets. `loadAfter` does not promise identical startup
+  and post-startup callback timing.
+- **after/ftdetect:** when filetype detection is already initialized, source the
+  direct `*.vim` and `*.lua` files in the native `filetypedetect` group. Otherwise,
+  leave them for the later native initialization scan. This registers detection
+  rules; it does not redetect existing buffers or invent a FileType event.
+- **after/ftplugin, after/indent, after/syntax:** keep native runtime lookup and
+  the existing FileType replay, without requiring `loadAfter`. These scripts run
+  for matching buffers, not once per plugin. Enable the corresponding native
+  filetype/indent/syntax facilities. Other runtime assets, such as after/queries,
+  remain available to the subsystem that reads them; no generic execution is
+  inferred from the directory name.
+
+`runtimePaths = [ ./runtime ];` is the way to provide a user-owned runtime tree,
+for example `runtime/after/ftplugin/lua.lua`, `runtime/after/indent/lua.lua`, or
+`runtime/after/ftdetect/custom.vim`. These trees are present from init and follow
+native scanning; the package opt-in does not manually source their files.
+
+Canonical source paths deduplicate native startup sourcing and custom `:source`
+operations, including opt symlinks. Attempted files are not retried after partial
+failure. Arbitrary user `dofile`, custom loader internals, explicit later
+`:runtime!` or multiple independently configured loaders are outside that
+exactly-once guarantee. As before, ordinary `plugin` scripts can be rescanned by
+Neovim during startup.
+
+An immediate after-script error fails its unit and skips config. A fallback error
+at VimEnter is reported and retained on its owning unit; its config has already
+run and is not undone. Independent fallback callbacks still run. Neovim's source
+history also records native scripts that threw: those are not retried, but history
+cannot distinguish success from failure, so divine does not claim to retain
+errors from Neovim's own scan in controller state. No rollback or reload is added.
 
 ## Trigger handoff
 
@@ -219,3 +288,10 @@ suite.
 The selected nix-unit method is recorded separately in
 [ADR 0006](adr/0006-use-nix-unit.md). Adopting the test method does not accept the
 proposed runtime behavior asserted by its fixtures.
+
+The after-directory checks add native startup, late `-c` and initial FileType
+loading, disabled native plugin scanning, independent fallback failures, Lua/Vim
+ordering, source aliases and filetype overrides. `checks.<system>.after-bundle`
+builds real nvim-cmp/cmp-buffer bundles and verifies exactly one buffer-source
+registration at startup and after startup, alongside runtimePaths ordering and
+after/ftdetect. This is focused coverage, not a general completion-plugin claim.

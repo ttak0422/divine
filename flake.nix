@@ -167,6 +167,7 @@
               touch "$out"
             '';
           nixpkgs-dependencies = import ./tests/nixpkgs-dependencies.nix { inherit pkgs; };
+          after-bundle = import ./tests/after-bundle.nix { inherit pkgs; };
           events = eventCheck pkgs "";
           events-stable =
             eventCheck nixpkgs-stable.legacyPackages.${system}
@@ -186,6 +187,7 @@
                 nvim --headless -u NONE --noplugin -n -i NONE -l tests/run.lua
                 sh tests/mini-test-runner.sh
                 nvim --headless -u NONE --noplugin -n -i NONE -l tests/mini-test-environment.lua
+                nvim --headless -u NONE --noplugin -n -i NONE -l tests/after-startup.lua
                 touch "$out"
               '';
         }

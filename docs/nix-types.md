@@ -118,6 +118,7 @@ CompilationDefinition = {
   preConfig? :: LuaSource,
   config? :: LuaSource,
   load? :: LuaSource,
+  loadAfter? :: Bool,
   onEvents? :: Conditions,
   onCommands? :: Conditions,
   onFiletypes? :: Conditions,
@@ -155,7 +156,8 @@ PlanNode = {
   triggers :: Triggers,
   before? :: LuaInline,
   after? :: LuaInline,
-  load? :: LuaInline
+  load? :: LuaInline,
+  after_path? :: String
 }
 PlanUnit = { id :: String, members :: [String], dependencies :: [String] }
 Plan = {
@@ -177,6 +179,8 @@ function or a plain string. `callback` creates Lua function source inside that
 record; `lib.generators.toLua` emits it as an unquoted expression in `Compiled.lua`.
 Plan node keys remain graph node IDs, while each node's `name` is the hashed opt
 directory name. Plan units omit the graph's `cyclic` and `startup` attributes.
+`loadAfter = true` emits the original package output's `after_path`; omission or
+`false` omits it. This boolean is applied after occurrence merging.
 Absent `runtimePaths` becomes an empty list; absent Lua source fields produce no
 corresponding callback attribute. The bundle derivation exposes the original
 resolved graph through `passthru.graph`.

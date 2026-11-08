@@ -83,6 +83,10 @@ let
       type = luaSource;
       description = "Custom Lua load operation, receiving the opt package name.";
     };
+    loadAfter = mkOption {
+      type = types.bool;
+      description = "Explicitly load after/plugin and initialized after/ftdetect scripts; startup after/plugin stays in the native phase.";
+    };
     onEvents = mkOption {
       type = conditions;
       default = [ ];

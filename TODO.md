@@ -26,7 +26,7 @@ item does not mean its design has been accepted.
 - [x] **DOCS**: generate standalone Markdown from inline `doc`, package identities and composed-input declaration locations; source-file line tracking and option documentation remain separate.
 - [x] **INLINE-CHECKS**: collect definition-local named Nix test functions into separate derivations, reject duplicate names, and keep test dependencies out of runtime outputs. Public names remain provisional.
 - [x] **FAILURES**: proposed unit states, retained errors, reentry and no automatic retry; tested with shared dependencies and native triggers.
-- [ ] **AFTER**: native startup/deferred absence and FileType/after-ftplugin fixtures exist; add explicit user opt-in after/plugin sourcing coverage.
+- [x] **AFTER**: explicit `loadAfter` supports after/plugin and late after/ftdetect; native startup, first-file FileType, disabled scanning, failures, source deduplication, ftplugin/indent/syntax and real cmp-buffer registration are covered. Review provisional timing in ADR 0008.
 
 - [ ] **NATIVE-STARTUP**: review whether ordinary repeated native scanning of unguarded plugin scripts needs a future explicit alternative; current behavior is documented and tested.
 - [x] **TEST-METHOD**: adopt pinned nix-unit with named cases, expected errors, case-discovery and failure-injection guards; legacy default runner replaced.
@@ -38,6 +38,6 @@ item does not mean its design has been accepted.
 
 - A non-delayed target remains in opt; it is explicitly loaded at startup.
 - Lua settings run before loading, then default packadd, then after loading.
-- Default loading does not source after/plugin after startup. Explicit per-target handling stays with the user.
+- Default loading does not source after/plugin after startup. `loadAfter = true` is an explicit per-target opt-in.
 - An after action does not guarantee completion of native after/plugin. FileType uses a separate runtime search.
 - No external loader/wrapper has been selected. Native denops support and general hot swap/unload/reload are outside scope.
