@@ -244,4 +244,4 @@ wrapper provides `bin/nvim` using `pkgs.neovim-unwrapped` and the bundle's
 locations and inline documentation. Locations identify entries in the composed
 configuration, not original source-file line numbers. Both builders remain
 separate from `mkBundle`; none of their outputs or test-only inputs are linked
-into the runtime tree. See [the definition guide](cartridges.md).
+into the runtime tree. See [the cartridge guide](cartridges.md).

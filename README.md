@@ -49,8 +49,8 @@ plugin compatibility has not been verified.
 ## Keep configuration in cartridges
 
 Split plugin families into ordinary Nix files while keeping each plugin's Lua
-configuration, `doc` string and a single `test` function or named `tests` functions together. Use package
-references for cross-file dependency edges and include each full definition once.
+configuration, `doc` string and a single `test` function or named `tests` functions
+together. Use package references for cross-file dependency edges and include each full definition once.
 
 ```nix
 {

@@ -1,5 +1,5 @@
 /**
-  Configure the projects picker with a package reference to the Telescope group.
+  Configure the projects picker with a package reference to the Telescope cartridge.
 
   Pin the original ahmedkhalf plugin; locked Nixpkgs packages a different fork.
 
