@@ -1,10 +1,10 @@
 # Executable runtime prototype
 
 The compiler, bundle and runtime connect the existing graph to Neovim. These are
-provisional implementation interfaces, not accepted public API decisions. Runtime decisions remain provisional; [0005](adr/0005-scc-runtime-phases.md) records
-SCC sequencing, and [0008](adr/0008-opt-in-after-loading.md) records after-directory
-handling. The behavior boundaries in [design.md](design.md)
-still apply.
+provisional implementation interfaces, not accepted public API decisions.
+[0005](adr/0005-scc-runtime-phases.md) records SCC sequencing, and
+[0008](adr/0008-opt-in-after-loading.md) records after-directory handling.
+The behavior boundaries in [design.md](design.md) still apply.
 
 ## Compile and build
 

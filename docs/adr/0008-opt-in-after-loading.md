@@ -1,7 +1,7 @@
 ---
 status: proposed
 date: 2026-11-08
-discussion: "https://github.com/ttak0422/divine/pulls"
+discussion: "https://github.com/ttak0422/divine/pull/7"
 ---
 
 # Supplement after directories through explicit opt-in

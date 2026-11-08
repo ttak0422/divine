@@ -241,8 +241,9 @@ guarantee that all standard `after/plugin` loading has completed.
 
 `after/ftplugin` follows a separate path: runtime lookup of `ftplugin` files for
 `FileType`. Neither `packadd` nor after-load configuration is specified to execute
-everything in the `after/` directory as one batch. `after/indent` and `after/syntax` likewise retain native lookup. Filetype detection
-is initialized separately; the explicit mechanism can register late
+everything in the `after/` directory as one batch. `after/indent` and
+`after/syntax` likewise retain native lookup. Filetype detection is initialized
+separately; the explicit mechanism can register late
 `after/ftdetect` scripts without replaying detection for existing buffers.
 See [runtime.md](runtime.md#after-directories) for implemented behavior and limits.
 
