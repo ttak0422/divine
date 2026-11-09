@@ -15,6 +15,7 @@ configuration:
 let
   adapter = import ./options.nix { inherit lib; };
   graph = resolve (adapter.normalize configuration);
+
   /**
     Raise a compiler diagnostic; this function never returns a value.
 
@@ -38,6 +39,7 @@ let
     "onKeys"
     "onModules"
   ];
+
   /**
     Read Lua text directly or from a Nix path, with a diagnostic context.
 
@@ -55,6 +57,7 @@ let
       builtins.readFile value
     else
       fail "${context} must be Lua text or a Lua file path";
+
   /**
     Wrap Lua source in a function expression for the Lua serializer.
 
@@ -70,6 +73,7 @@ let
   callback =
     context: arguments: value:
     lib.generators.mkLuaInline "function(${arguments})\n${source context value}\nend";
+
   /**
     Normalize one nonempty condition or a list into unique condition strings.
 
@@ -91,6 +95,7 @@ let
       lib.unique values
     else
       fail "${context} must be a string or a list of nonempty strings";
+
   /**
     Normalize one key declaration or a list of declarations.
 
@@ -106,6 +111,7 @@ let
     context: value:
     let
       entries = if builtins.isString value || builtins.isAttrs value then [ value ] else value;
+
       /**
         Normalize one nonempty key, defaulting an omitted mode to normal mode.
 
@@ -167,6 +173,7 @@ let
       inherit value;
     }) eventNames.aliases
   );
+
   /**
     Canonicalize native event names and deduplicate in first-declaration order.
 
@@ -183,6 +190,7 @@ let
         name: eventLookup.${lib.toLower name} or (fail "unknown onEvents event '${name}' (Neovim 0.12.4)")
       ) (conditions "onEvents" value)
     );
+
   /**
     Compile shared settings without assigning package identity.
 

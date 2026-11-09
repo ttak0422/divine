@@ -91,9 +91,11 @@ separately.
       lazy = true;
       dependPlugins = [
         pkgs.vimPlugins.plenary-nvim
+
         # Dependencies accept the same detailed definitions and further nesting.
         {
           plugin = pkgs.vimPlugins.vim-startuptime;
+
           # Omit lazy to load at startup while keeping this in opt.
           preConfig = # lua
             ''

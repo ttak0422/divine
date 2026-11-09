@@ -26,6 +26,7 @@ if "$runner" --eval-store 'dummy://' --expr '{
   echo 'nix-unit incorrectly accepted an unexpected evaluation error' >&2
   exit 1
 fi
+
 # Require each intentional failure to identify its case, rather than merely
 # accepting an unrelated invocation or setup failure as a successful guard.
 grep -q testMismatch "$work/mismatch.log"

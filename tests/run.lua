@@ -24,6 +24,7 @@ for _, file in ipairs(files) do
 end
 assert(#cases > 0, "empty test suite: no files")
 MiniTest.execute(cases, { reporter = MiniTest.gen_reporter.stdout({ group_depth = 3 }) })
+
 -- The reporter exits with 0/1; a missing completion must not silently pass.
 -- This scheduling wait cannot preempt a hung synchronous child RPC.
 vim.wait(120000, function() return not MiniTest.is_executing() end, 10)

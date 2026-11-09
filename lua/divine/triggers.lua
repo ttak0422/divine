@@ -38,6 +38,7 @@ local M = {}
 ---Always raises; no successful return.
 ---@return nil
 local function fail(message) error("divine triggers: " .. message, 0) end
+
 ---@param value any Untrusted trigger list, validated before registration.
 ---@param label string
 ---@return nil
@@ -60,6 +61,7 @@ local function snapshot(event)
   local events = { event }
   if event == "BufReadPost" then events = { "BufReadPre", event } end
   if event == "FileType" then events = { "BufReadPre", "BufReadPost", event } end
+
   ---@type divine.EventReplay[]
   local result = {}
   for _, name in ipairs(events) do
@@ -123,8 +125,10 @@ function M.register(controller, nodes)
   end
   local ids = vim.tbl_keys(nodes)
   table.sort(ids)
+
   ---@type table<string, boolean>, table<string, boolean>, boolean
   local commands, keys, has_modules = {}, {}, false
+
   -- Validate the full registration before changing editor state.
   for _, id in ipairs(ids) do
     if type(nodes[id]) ~= "table" then fail("node " .. tostring(id) .. " must be a table") end
@@ -168,6 +172,7 @@ function M.register(controller, nodes)
       end
     end
   end
+
   -- The compiler supplies canonical event identities. Keep the plan unchanged.
   ---@type table<divine.NodeId, table<string, boolean>>
   local node_events = {}
@@ -179,10 +184,13 @@ function M.register(controller, nodes)
     end
     node_events[id] = events
   end
+
   ---@type table<divine.NodeId, (fun())[]>, table<divine.NodeId, boolean>, table<string, boolean>
   local cleaners, pending, module_busy = {}, {}, {}
+
   ---@type divine.ModuleSearcher
   local searcher
+
   ---@param id divine.NodeId
   ---@return nil
   local function cleanup(id)
@@ -192,16 +200,20 @@ function M.register(controller, nodes)
       remove()
     end
   end
+
   ---@param id divine.NodeId
   ---@return nil
   local function load(id)
     cleanup(id)
     controller.load(id)
   end
+
   ---@type table<string, boolean>
   local event_busy = {}
+
   ---@type table<divine.NodeId, boolean>
   local reserved = {}
+
   ---@param targets divine.NodeId[]
   ---@param attempt fun(id: divine.NodeId)
   ---@return nil
@@ -222,6 +234,7 @@ function M.register(controller, nodes)
     end
     if not ok then error(err, 0) end
   end
+
   ---@param args divine.EventContext
   ---@return nil
   local function on_event(args)
@@ -248,6 +261,7 @@ function M.register(controller, nodes)
     event_busy[args.event] = nil
     if not ok then error(err, 0) end
   end
+
   ---@type table<string, { handle: integer, count: integer }>
   local event_handles = {}
   for _, id in ipairs(ids) do
@@ -284,6 +298,7 @@ function M.register(controller, nodes)
         local range = ""
         if args.range == 1 then range = tostring(args.line1) end
         if args.range == 2 then range = args.line1 .. "," .. args.line2 end
+
         -- Reparse the original raw arguments rather than joining fargs, which
         -- loses escaped whitespace, quotes and the target's nargs semantics.
         vim.cmd(args.mods .. " " .. range .. name .. (args.bang and "!" or "") .. " " .. args.args)
@@ -305,6 +320,7 @@ function M.register(controller, nodes)
       end)
     end
   end
+
   ---@param id divine.NodeId
   ---@return nil
   local function install_keys(id)
@@ -312,6 +328,7 @@ function M.register(controller, nodes)
     for _, key in ipairs(triggers.keys or {}) do
       local mode = key.mode or "n"
       local lhs = key.lhs
+
       ---@return string?
       local function callback()
         local count, register = vim.v.count, vim.v.register
@@ -323,6 +340,7 @@ function M.register(controller, nodes)
             vim.api.nvim_echo({ { tostring(err), "ErrorMsg" } }, true, { err = true })
             return "<Esc>"
           end
+
           -- Keep the pending operator in Neovim. The leading no-op allows the
           -- same lhs to be remapped to its newly installed definition.
           return "<Ignore>" .. lhs
@@ -355,6 +373,7 @@ function M.register(controller, nodes)
       end)
     end
   end
+
   ---@param name string
   ---@return (fun(): any)|string loader_or_error
   searcher = function(name)
@@ -374,6 +393,7 @@ function M.register(controller, nodes)
     end)
     module_busy[name] = nil
     if not ok then error(err, 0) end
+
     -- Continue the existing searcher chain, which now sees prepared runtimes.
     local loaded = package.loaded[name]
     if loaded ~= nil then
@@ -381,13 +401,16 @@ function M.register(controller, nodes)
     end
     return "\n\tdivine: no module loader (runtime preparation complete)"
   end
+
   -- Keep the searcher installed while it runs: removing it would shift Lua's
   -- next searcher index. It becomes inert once all nodes have been cleaned.
   if has_modules then table.insert(package.loaders, 2, searcher) end
   local activated = false
+
   ---@return nil
   local function activate()
     if activated then return end
+
     -- Startup configuration may change mapleader or install mappings. Validate
     -- every pending key against that final state before installing any stubs.
     ---@type table<string, boolean>
@@ -408,9 +431,11 @@ function M.register(controller, nodes)
     for _, id in ipairs(ids) do
       if pending[id] then install_keys(id) end
     end
+
     ---@type table<integer, string>, table<divine.NodeId, integer>
     local matches, targets = {}, {}
     local before = snapshot("FileType")
+
     -- Snapshot matches before any load cleans a node's other trigger stubs.
     for _, id in ipairs(ids) do
       if pending[id] then

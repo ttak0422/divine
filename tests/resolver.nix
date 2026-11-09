@@ -16,6 +16,7 @@ let
   toolDep = package "tool-dependency";
   toolDeep = package "tool-deep";
   toolGlobal = package "tool-global";
+
   # Context must refer to a real store path: newer Nix validates appendContext inputs.
   context = builtins.getContext (builtins.toFile "divine-context-fixture" "context fixture");
   contextual = a // {

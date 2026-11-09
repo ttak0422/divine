@@ -32,6 +32,7 @@
         "aarch64-linux"
         "x86_64-linux"
       ];
+
       /**
         Map a function over the supported system strings into a system-keyed set.
 
@@ -42,6 +43,7 @@
         ```
       */
       eachSystem = nixpkgs.lib.genAttrs systems;
+
       /**
         Build the style-check derivation for one supported system.
 
@@ -91,6 +93,7 @@
           eventPlans = pkgs.writeText "divine-event-plans.lua" (
             "return " + import ./tests/events.nix { inherit (pkgs) lib; }
           );
+
           /**
             Run compiled event plans on a runtime, optionally checking its source catalog.
 

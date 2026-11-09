@@ -66,16 +66,20 @@ end
 function M.setup(plan)
   local units, node_units = index_plan(plan)
   local definitions = vim.tbl_extend("error", {}, plan.nodes, plan.configurations or {})
+
   ---@type table<divine.NodeId, boolean>, table<divine.NodeId, boolean>, table<divine.NodeId, string>
   local prepared, loaded, package_errors = {}, {}, {}
+
   ---@type table<divine.NodeId, boolean>
   local loading = {}
+
   ---@class divine.Controller: divine.TriggerController
   ---@field states table<divine.UnitId, divine.UnitState>
   ---@field errors table<divine.UnitId, string> Failure messages exist only for failed units.
   ---@field node_units table<divine.NodeId, divine.UnitId>
   ---@field load_unit fun(id: divine.UnitId) Loads or rethrows a retained failure.
   local controller = { states = {}, errors = {}, node_units = node_units }
+
   ---@type divine.Cleanup?
   local cleanup
   for id in pairs(units) do
@@ -100,6 +104,7 @@ function M.setup(plan)
     local state = controller.states[id]
     if state == "failed" then error(controller.errors[id], 0) end
     if state == "loaded" then return end
+
     -- Prepared SCC members can require one another without recursively loading.
     if state == "configuring" or state == "loading" then return end
     assert(state == "unloaded", "divine: reentry before runtime preparation: " .. id)
