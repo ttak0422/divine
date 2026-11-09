@@ -65,11 +65,20 @@ not an acceptance of the provisional repeated-definition or timing policies belo
   to `false`; explicit timing remains authoritative. Explicit `lazy = null` also
   means unspecified and is removed before comparing timing declarations. Null
   in other settings is not treated as omission.
-- **Settings:** combine fields supplied in separate occurrences. Repeating an
-  identical typed value is accepted; different values for the same field error
-  with the package and both input locations. String equality includes Nix build
-  context. Nested attribute values must be equal, not recursively merged.
-  Functions or other values that cannot be compared are not silently chosen.
+- **Settings:** the current prototype combines fields supplied in separate
+  occurrences. Repeated supplied fields compare canonical trigger views under
+  [ADR 0011](adr/0011-normalize-repeated-trigger-forms.md), or exact typed values
+  for other fields. Different values error with the package and both input
+  locations. String equality includes Nix build context. Nested attribute values
+  must be equal, not recursively merged. Functions or other values that cannot
+  be compared are not silently chosen. The first supplied raw value is retained.
+- **Trigger comparison:** singleton/list forms, existing event aliases/case and
+  default key modes use the same form normalization as compilation. Equal string
+  conditions deduplicate in first-occurrence order with context-sensitive
+  equality; key duplicates remain significant. Distinct-element order is not
+  sorted, and conditions from different declarations are not unioned. Omission
+  does not insert an empty list. Malformed raw resolver metadata falls back to
+  strict comparison; the compiler still rejects malformed supplied inputs.
 - **Inline tests:** `test` is one check function, named with `lib.getName` of the
   plugin package; `tests` maps explicit names to functions. Reject both forms on
   one definition, including an empty `tests` map. Collect
@@ -88,8 +97,10 @@ not an acceptance of the provisional repeated-definition or timing policies belo
   Only identifiers discard string context so they can be used safely as keys.
 
 Package identity and finite back-references are accepted independently of the
-remaining policies in this section. Field equality, conflicts, edge/tool unions
-and retained provenance remain the ADR 0002 proposal. Public names and any
+remaining policies in this section. ADR 0011 accepts comparison after equivalent
+trigger normalization and conflicts for other unequal values. Complementary-field
+composition, edge/tool unions and retained provenance remain the ADR 0002
+proposal. Public names and any
 configuration-unit or multi-package API also remain open; they are not accepted
 as a side effect of the package-node decision.
 

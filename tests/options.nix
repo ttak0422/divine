@@ -189,17 +189,21 @@ in
       }).plan.nodes.${a.outPath}.triggers.commands;
     expected = [ "Example" ];
   };
-  testPreserveRawConflict = invalid {
-    plugins = [
-      {
-        plugin = a;
-        onCommands = "Example";
-      }
-      {
-        plugin = a;
-        onCommands = [ "Example" ];
-      }
-    ];
+  testNormalizeRepeatedTriggerForms = {
+    expr =
+      (api.compile {
+        plugins = [
+          {
+            plugin = a;
+            onCommands = "Example";
+          }
+          {
+            plugin = a;
+            onCommands = [ "Example" ];
+          }
+        ];
+      }).plan.nodes.${a.outPath}.triggers.commands;
+    expected = [ "Example" ];
   };
   testOpaquePackageMetadata = {
     expr =

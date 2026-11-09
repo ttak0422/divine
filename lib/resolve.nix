@@ -77,6 +77,41 @@ let
         attrNames a == attrNames b && lib.all (name: sameValue a.${name} b.${name}) (attrNames a)
     else
       a == b;
+  triggerForms = import ./trigger-forms.nix { inherit lib fail; };
+
+  /**
+    Normalize valid trigger representations for comparison only.
+
+    Preserve the first supplied settings and omission. Invalid raw resolver
+    metadata falls back to strict equality; compiler validation remains separate.
+    Conditions deduplicate with context-sensitive equality, never by sorting or
+    combining declarations. Key duplicates remain observable runtime conflicts.
+
+    # Type
+
+    ```
+    comparisonValue :: String -> a -> a
+    ```
+  */
+  comparisonValue =
+    field: value:
+    if !builtins.hasAttr field triggerForms then
+      value
+    else
+      let
+        comparison = builtins.tryEval (
+          let
+            entries = triggerForms.${field} value;
+            normalized =
+              if field == "onKeys" then
+                entries
+              else
+                foldl' (acc: entry: if lib.any (sameValue entry) acc then acc else acc ++ [ entry ]) [ ] entries;
+          in
+          deepSeq normalized normalized
+        );
+      in
+      if comparison.success then comparison.value else value;
 
   /**
     Deduplicate and lexically sort context-free string identifiers.
@@ -248,7 +283,9 @@ let
           state: field:
           if builtins.hasAttr field state.values then
             let
-              comparison = builtins.tryEval (sameValue state.values.${field} fields.${field});
+              comparison = builtins.tryEval (
+                sameValue (comparisonValue field state.values.${field}) (comparisonValue field fields.${field})
+              );
             in
             if comparison.success && comparison.value then
               state

@@ -164,9 +164,13 @@ dependencies remain valid at every depth. See [ADR 0001](adr/0001-output-path-id
 
 This package-node rule does not select the identity or schema of reusable
 configuration units, including a possible interface grouping multiple packages.
-The settings merge policy and handling of conflicting timing or configuration
-remain undecided. The example's repeated `vim-repeat` identifies one package node
-but does not imply that settings are silently merged or discarded.
+Repeated supplied fields use strict comparison after equivalent trigger forms
+are normalized in Nix; other differences remain conflicts. See
+[ADR 0011](adr/0011-normalize-repeated-trigger-forms.md). Complementary-field
+composition, edge/tool unions and retained provenance remain separate review
+choices in [ADR 0002](adr/0002-repeated-definitions.md). The example's repeated
+`vim-repeat` identifies one package node but does not imply that settings are
+silently discarded, concatenated or given hidden precedence.
 
 Treat each SCC, including cycles, as one load unit. Finite inputs may describe
 cyclic graphs; directly cyclic Nix values are outside this input contract. The

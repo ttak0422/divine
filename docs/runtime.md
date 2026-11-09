@@ -204,7 +204,9 @@ implied by the focused fixtures.
 
 String triggers accept either one string or a list; omission and empty lists
 mean no trigger of that kind. These are prototype representations, not final
-schema choices.
+schema choices. Repeated definitions compare equivalent forms in Nix before
+compilation, as accepted in [ADR 0011](adr/0011-normalize-repeated-trigger-forms.md).
+This does not combine different trigger lists or reorder their elements.
 
 - `onEvents`: native Neovim event names, including aliases and case variants.
   The Nix compiler normalizes case and aliases, deduplicates each node's events,
