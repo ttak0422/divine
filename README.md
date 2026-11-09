@@ -27,3 +27,4 @@ See [ADR 0006](docs/adr/0006-use-nix-unit.md) and
 - [Nix type reference](docs/nix-types.md)
 - [Architecture decisions](docs/adr/README.md)
 - [Planned work](TODO.md)
+- [Remaining policy reviews](docs/proposals/README.md)
