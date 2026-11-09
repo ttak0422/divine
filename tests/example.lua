@@ -12,6 +12,7 @@ assert(
   type(require("telescope").extensions.projects.projects) == "function",
   "projects extension is missing"
 )
+
 -- Exercise the directly configured plugin with mapped insert-mode input.
 vim.cmd("enew")
 local function type_text(text)

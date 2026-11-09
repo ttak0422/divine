@@ -22,6 +22,7 @@
         hash = "sha256-avV3wMiDbraxW4mqlEsKy0oeewaRj9Q33K8NzWoaptU=";
       };
     };
+
     # This configuration uses Telescope; project.nvim itself also works without it.
     dependPlugins = [ telescope.telescope.plugin ];
     config = # lua

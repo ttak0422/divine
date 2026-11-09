@@ -242,6 +242,7 @@ T["supports filetype registration before enabling filetype plugins"] = case(func
   local count = f.setup("lateft", { filetypes = { "divinelate" } })
   vim.cmd("filetype plugin on")
   vim.bo.filetype = "divinelate"
+
   -- The original dispatch still has the native loader pending after replay.
   assert(
     count() == 1 and vim.g.divine_late_ft == 2 and vim.g.divine_late_after == 2,
@@ -390,6 +391,7 @@ T["hands off terminal-mode input on first and repeated keys"] = function()
       end
     end
   end)()
+
   -- Terminal input needs the child's main loop, outside a synchronous Lua RPC.
   local function run(lazy)
     child.lua("_G.divine_terminal_setup(...)", { lazy })
@@ -808,6 +810,7 @@ T["reserves batch targets during nested events"] = case(function(f)
       if id == "a" then
         vim.api.nvim_exec_autocmds("BufEnter", {})
         assert(vim.deep_equal(loaded, { "a" }))
+
         -- Model runtime cleanup of a dependency or SCC peer.
         cleanup("b")
       end

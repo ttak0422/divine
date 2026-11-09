@@ -3,6 +3,7 @@ let
   inherit (pkgs) lib;
   api = import ../lib { inherit lib; };
   inherit (pkgs.vimPlugins) vim-textobj-entire vim-textobj-line vim-textobj-user;
+
   # A user-selected variant must not also pull in the unmodified dependency.
   selectedUser = vim-textobj-user.overrideAttrs (old: {
     postInstall = (old.postInstall or "") + ''
@@ -48,6 +49,7 @@ let
       }
     ];
   };
+
   # Reference reproduction: nixpkgs promotes the original dependency into start,
   # even when a different output of the same plugin is explicitly placed in opt.
   reference = pkgs.vimUtils.packDir {

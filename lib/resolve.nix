@@ -25,6 +25,7 @@ let
     listToAttrs
     mapAttrs
     ;
+
   /**
     Raise a resolver diagnostic; this function never returns a value.
 
@@ -35,6 +36,7 @@ let
     ```
   */
   fail = message: throw "divine resolver: ${message}";
+
   /**
     Return the context-free output-path identity of a package.
 
@@ -47,6 +49,7 @@ let
   # Accepted package-node identity, not configuration-unit identity: see ADR 0001.
   # IDs must be context-free; original package values retain their build dependencies.
   key = package: builtins.unsafeDiscardStringContext (toString package);
+
   /**
     Compare values recursively, including the build context of strings.
 
@@ -75,6 +78,7 @@ let
     else
       a == b;
   triggerForms = import ./trigger-forms.nix { inherit lib fail; };
+
   /**
     Normalize valid trigger representations for comparison only.
 
@@ -108,6 +112,7 @@ let
         );
       in
       if comparison.success then comparison.value else value;
+
   /**
     Deduplicate and lexically sort context-free string identifiers.
 
@@ -127,6 +132,7 @@ let
         }) values
       )
     );
+
   /**
     Validate a package list, deduplicate by output path and sort by that path.
 
@@ -182,6 +188,7 @@ let
   trees = inspectDefinitions plugins;
   occurrences = concatLists (lib.imap0 (i: node: collect "plugins[${toString i}]" node) trees);
   configurations = builtins.filter (o: o.definition ? packages) occurrences;
+
   # A group member declares a package, not a singleton configuration/default.
   packageOccurrences =
     builtins.filter (o: !(o.definition ? packages)) occurrences
@@ -344,6 +351,7 @@ let
       name = o.id;
       value = {
         inherit (o) id dependencies;
+
         # Duplicate packages are harmless: retain the first declaration position.
         members = lib.unique (map key o.definition.packages);
         settings = {
@@ -361,6 +369,7 @@ let
       node
       // {
         members = [ id ];
+
         # Membership alone must not seed a second startup load before group preConfig.
         startup = lib.any (o: !(o.memberOnly or false)) groups.${id} && !node.settings.lazy;
       }
@@ -387,6 +396,7 @@ let
         operator = item: map (id: { key = id; }) (edges item.key);
       }
     );
+
   # shortcut: mutual reachability stores O(V^2) reachability; benchmark before large migrations.
   reachable = listToAttrs (
     map (id: {

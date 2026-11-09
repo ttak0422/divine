@@ -33,6 +33,7 @@ let
       values
     else
       fail "${context} must be a string or a list of nonempty strings";
+
   /**
     Normalize one key declaration or a list of declarations.
 
@@ -48,6 +49,7 @@ let
     context: value:
     let
       entries = if builtins.isString value || builtins.isAttrs value then [ value ] else value;
+
       /**
         Normalize one nonempty key, defaulting an omitted mode to normal mode.
 
@@ -109,6 +111,7 @@ let
       inherit value;
     }) eventNames.aliases
   );
+
   /**
     Canonicalize event spellings while preserving order, duplicates and context.
 

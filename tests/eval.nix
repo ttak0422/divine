@@ -3,6 +3,7 @@
 }:
 let
   api = import ../lib { inherit lib; };
+
   # Derivation-shaped fixtures; these tests do not realize packages.
   package = name: {
     type = "derivation";

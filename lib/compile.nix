@@ -15,6 +15,7 @@ configuration:
 let
   adapter = import ./options.nix { inherit lib; };
   graph = resolve (adapter.normalize configuration);
+
   /**
     Raise a compiler diagnostic; this function never returns a value.
 
@@ -38,6 +39,7 @@ let
     "onKeys"
     "onModules"
   ];
+
   /**
     Read Lua text directly or from a Nix path, with a diagnostic context.
 
@@ -55,6 +57,7 @@ let
       builtins.readFile value
     else
       fail "${context} must be Lua text or a Lua file path";
+
   /**
     Wrap Lua source in a function expression for the Lua serializer.
 
@@ -71,6 +74,7 @@ let
     context: arguments: value:
     lib.generators.mkLuaInline "function(${arguments})\n${source context value}\nend";
   triggerForms = import ./trigger-forms.nix { inherit lib fail; };
+
   /**
     Compile shared settings without assigning package identity.
 

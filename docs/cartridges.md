@@ -250,6 +250,7 @@ The provisional call is:
 ```nix
 lib.mkChecks {
   inherit pkgs configuration;
+
   # Optional: reuse a bundle or supply your own configured Neovim package.
   # bundle = lib.mkBundle { inherit pkgs configuration; };
   # neovim = myConfiguredNeovim;

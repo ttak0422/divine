@@ -16,6 +16,7 @@ let
   toolDep = package "tool-dependency";
   toolDeep = package "tool-deep";
   toolGlobal = package "tool-global";
+
   # Context must refer to a real store path: newer Nix validates appendContext inputs.
   context = builtins.getContext (builtins.toFile "divine-context-fixture" "context fixture");
   contextual = a // {
@@ -380,6 +381,164 @@ in
           toolRoot
         ];
     expected = true;
+  };
+  # Characterize the remaining ADR 0002 proposal, without adopting its policy.
+  testComplementarySettingsInEitherOrder = {
+    expr =
+      let
+        declarations = [
+          {
+            plugin = a;
+            preConfig = "prepare()";
+          }
+          {
+            plugin = a;
+            config = "configure()";
+          }
+        ];
+      in
+      lib.all
+        (
+          entries:
+          (resolve { plugins = entries; }).nodes.${id a}.settings == {
+            lazy = false;
+            preConfig = "prepare()";
+            config = "configure()";
+          }
+        )
+        [
+          declarations
+          (lib.reverseList declarations)
+        ];
+    expected = true;
+  };
+  testRepeatedOccurrenceLocations = {
+    expr =
+      (resolve {
+        plugins = [
+          {
+            plugin = b;
+            dependPlugins = [ a ];
+          }
+          a
+          {
+            plugin = c;
+            dependPlugins = [
+              {
+                plugin = d;
+                dependPlugins = [ a ];
+              }
+            ];
+          }
+        ];
+      }).nodes.${id a}.origins;
+    expected = [
+      "plugins[0].dependPlugins[0]"
+      "plugins[1]"
+      "plugins[2].dependPlugins[0].dependPlugins[0]"
+    ];
+  };
+  testRepeatedFirstPackageAndTool = {
+    expr =
+      let
+        firstPackage = contextual // {
+          marker = "first package";
+        };
+        firstTool = toolRoot // {
+          marker = "first tool";
+        };
+        result = resolve {
+          extraPackages = [ firstTool ];
+          plugins = [
+            {
+              plugin = firstPackage;
+              extraPackages = [ (toolRoot // { marker = "later tool"; }) ];
+            }
+            (a // { marker = "later package"; })
+          ];
+        };
+      in
+      result.nodes.${id a}.package.marker == "first package"
+      && builtins.getContext (toString result.nodes.${id a}.package) == context
+      && (builtins.head result.extraPackages).marker == "first tool"
+      && (builtins.head result.nodes.${id a}.extraPackages).marker == "later tool";
+    expected = true;
+  };
+  testRepeatedEdgeAndToolUnionsInEitherOrder = {
+    expr =
+      let
+        declarations = [
+          {
+            plugin = a;
+            dependPlugins = [
+              c
+              b
+            ];
+            extraPackages = [
+              toolRoot
+              toolDep
+            ];
+          }
+          {
+            plugin = a;
+            dependPlugins = [ b ];
+            extraPackages = [ toolRoot ];
+          }
+        ];
+      in
+      lib.all
+        (
+          entries:
+          let
+            result = resolve { plugins = entries; };
+          in
+          result.nodes.${id a}.dependencies == map id [
+            b
+            c
+          ]
+          &&
+            map id result.nodes.${id a}.extraPackages == map id [
+              toolDep
+              toolRoot
+            ]
+          &&
+            map id result.extraPackages == map id [
+              toolDep
+              toolRoot
+            ]
+        )
+        [
+          declarations
+          (lib.reverseList declarations)
+        ];
+    expected = true;
+  };
+  testNoRecursiveSettingsMerge = {
+    expr = builtins.deepSeq (resolve (conflicts "custom" { left = 1; } { right = 2; })) true;
+    expectedError.type = "ThrownError";
+  };
+  testConflictReportsBothLocations = {
+    expr = builtins.deepSeq (resolve {
+      plugins = [
+        {
+          plugin = b;
+          dependPlugins = [
+            {
+              plugin = a;
+              config = "first()";
+            }
+          ];
+        }
+        {
+          plugin = a;
+          config = "second()";
+        }
+      ];
+    }) true;
+    expectedError = {
+      type = "ThrownError";
+      msg = "divine resolver: conflicting field 'config' for '${id a}' at plugins\\[0\\]\\.dependPlugins\\[0\\] and plugins\\[1\\]";
+    };
   };
   testSameNamesDifferentPaths = {
     expr =

@@ -1,6 +1,7 @@
 #!/bin/sh
 # Exercise the same entry point used by Make and the flake check.
 set -eu
+
 # NVIM is Neovim's server address in child processes, not an executable.
 runner=${NVIM_BIN:-nvim}
 work=$(mktemp -d)
@@ -36,6 +37,7 @@ for scenario in failure empty collection; do
     exit 1
   fi
 done
+
 # Reject unrelated startup/dependency failures as a false-positive guard result.
 grep -q 'runner pass' "$work/pass.log"
 grep -q 'intentional runner failure' "$work/failure.log"

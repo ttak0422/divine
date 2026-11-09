@@ -44,3 +44,11 @@ item does not mean its design has been accepted.
 - Default loading does not source after/plugin after startup. `loadAfter = true` is an explicit per-target opt-in.
 - With `loadAfter = true`, original after/plugin files run synchronously before config and are hidden from the generated native opt view. Default config does not guarantee completion of native after/plugin. FileType uses a separate runtime search.
 - No external loader/wrapper has been selected. Native denops support and general hot swap/unload/reload are outside scope.
+
+## Prepared policy reviews
+
+The remaining API, TRIGGER-POLICY, REPEATED-DEFINITIONS and NATIVE-STARTUP
+questions have [draft review proposals](docs/proposals/README.md) with examples,
+alternatives and implementation/test evidence. These proposals do not complete
+the open decisions or change the status of their ADRs. Equivalent-trigger
+normalization is tracked separately in [PR #14](https://github.com/ttak0422/divine/pull/14).

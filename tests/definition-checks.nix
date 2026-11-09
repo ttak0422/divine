@@ -5,6 +5,7 @@ let
     mkdir -p "$out/plugin"
     echo 'let g:divine_inline_fixture = 1' > "$out/plugin/fixture.vim"
   '';
+
   # A unique test-only input makes closure leakage observable even when the
   # runtime itself has transitive Python references.
   testOnly = pkgs.writeText "divine-test-only-sentinel" "test dependency";
