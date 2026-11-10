@@ -40,6 +40,7 @@ let
   project = import ./cartridges/project.nix { inherit pkgs telescope; };
 in
 {
+  extraPackages = [ pkgs.sl ];
   plugins = [
     {
       plugin = pkgs.vimPlugins.mini-pairs;
@@ -67,6 +68,11 @@ The public `packages.<system>.example` output calls `lib.mkBundle` on
 `examples/example.nix`; both the inline checks and startup smoke test use that
 exported bundle. Build it with `nix build .#example`, then run installed Neovim
 with `nvim -u ./result/init.lua`.
+
+The top-level `extraPackages = [ pkgs.sl ];` makes `sl` available on Neovim's
+`PATH`, independently of any plugin. Run `:terminal sl` in this example to watch
+the train. The headless smoke test runs `sl -v` and checks its output and exit status.
+Telescope's `ripgrep` and `fd` tools demonstrate plugin-local `extraPackages`.
 
 To reuse the complete configuration:
 

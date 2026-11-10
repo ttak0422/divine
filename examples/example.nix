@@ -15,6 +15,8 @@ let
   project = import ./cartridges/project.nix { inherit pkgs telescope; };
 in
 {
+  # Tools used directly in Neovim need not belong to a plugin declaration.
+  extraPackages = [ pkgs.sl ];
   plugins = [
     # Simple plugins can be declared directly, without a cartridge.
     {
