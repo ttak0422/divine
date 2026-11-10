@@ -95,3 +95,18 @@ and declaration locations: review it for private information before sharing it.
 Public API names and group semantics remain provisional. This viewer does not
 change the review status of the [resolution policies](resolution.md) or
 [architecture decisions](adr/README.md).
+
+## Browser layout check
+
+The Nix checks include generated HTML and dependency-free viewer contract tests.
+For an additional real-browser regression check, with Playwright's Python package
+and Chromium already installed, run:
+
+```sh
+nix build .#graph
+python3 tests/graph-browser.py result
+```
+
+This uses the exported viewer with a synthetic tall SVG and checks viewport
+containment, Fit, inner scrolling at 100%, and narrow-screen layout. It does not
+add a browser dependency to the normal development shell or runtime bundle.

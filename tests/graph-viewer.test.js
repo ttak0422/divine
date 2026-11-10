@@ -136,3 +136,9 @@ test("empty graphs show an explanation and disable irrelevant controls", () => {
   assert.equal(e["zoom-in"].disabled, true);
   assert.equal(e.search.disabled, true);
 });
+
+// CSS Grid's automatic minimum otherwise lets a tall SVG expand the row and
+// makes Fit measure the diagram's height instead of the visible viewport.
+test("canvas can shrink inside the fixed-height graph row", () => {
+  assert.match(html, /\.canvas\s*\{[^}]*min-height:\s*0\s*;/);
+});
