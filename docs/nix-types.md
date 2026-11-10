@@ -315,3 +315,46 @@ locations and inline documentation. Locations identify entries in the composed
 configuration, not original source-file line numbers. Both builders remain
 separate from `mkBundle`; none of their outputs or test-only inputs are linked
 into the runtime tree. See [the cartridge guide](cartridges.md).
+
+## Offline graph export
+
+`mkGraph :: { pkgs :: PackageSet, configuration :: CompilationConfiguration } -> Derivation`
+returns one standalone HTML file, separate from the runtime bundle. Compiler
+validation precedes display projection; inline checks are not invoked. Graphviz
+is a build-time dependency only. See [the graph guide](graph.md).
+
+The internal projection in `lib/graph/data.nix` produces
+`{ data :: GraphView, dot :: String }` from a resolved `Graph`:
+
+```text
+GraphView = {
+  nodes :: [GraphViewNode],
+  roots :: [String],
+  units :: [Unit]
+}
+GraphViewNode = {
+  id :: String,
+  svgId :: String,
+  label :: String,
+  kind :: "package" | "configuration",
+  doc :: String | Null,
+  origins :: [String],
+  dependencies :: [String],
+  members :: [String],
+  root :: Bool,
+  unitId :: String,
+  unitStartup :: Bool,
+  cyclic :: Bool,
+  physicalStartup :: Bool | Null
+}
+```
+
+`svgId` is an internal display identifier, independent of user-supplied labels.
+`unitId` identifies the SCC owning the configuration vertex, not a containing
+package group. `unitStartup` is that owner's startup demand. `physicalStartup`
+is the union of startup demand across units containing a physical package and
+is null for group configuration nodes. `members` retains declared group order;
+it is not a dependency list. Absent documentation is null, while an explicitly
+empty string remains empty. These display records contain no callback source,
+check functions or arbitrary package metadata and are not a stable interchange
+format.

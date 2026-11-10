@@ -137,4 +137,15 @@ in
     ```
   */
   mkDocs = import ./docs.nix { inherit lib compile; };
+
+  /**
+    Build an offline HTML dependency graph with inline documentation on hover.
+
+    # Type
+
+    ```
+    mkGraph :: { pkgs :: PackageSet, configuration :: CompilationConfiguration } -> Derivation
+    ```
+  */
+  mkGraph = import ./graph.nix { inherit lib compile; };
 }
