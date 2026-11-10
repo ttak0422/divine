@@ -82,6 +82,10 @@
             inherit pkgs;
             configuration = import ./examples/example.nix { inherit pkgs; };
           };
+          graph = self.lib.mkGraph {
+            inherit pkgs;
+            configuration = import ./examples/example.nix { inherit pkgs; };
+          };
         }
       );
       checks = eachSystem (
@@ -126,6 +130,24 @@
         })
         // {
           pre-commit-check = hooksFor system;
+          graph =
+            let
+              fixture = self.lib.mkGraph {
+                inherit pkgs;
+                configuration = import ./tests/graph-fixture.nix;
+              };
+              empty = self.lib.mkGraph {
+                inherit pkgs;
+                configuration.plugins = [ ];
+              };
+            in
+            pkgs.runCommand "divine-graph-tests" { nativeBuildInputs = [ pkgs.nodejs ]; } ''
+              cp -R ${self} source
+              cd source
+              node --test tests/graph-viewer.test.js
+              node tests/graph-html.test.js ${fixture} ${empty}
+              touch "$out"
+            '';
           example =
             assert builtins.elem (toString pkgs.vimPlugins.mini-pairs) exampleBundle.graph.roots;
             assert
@@ -211,6 +233,7 @@
               pkgs.nix-unit
               pkgs.git
               pkgs.gnumake
+              pkgs.nodejs
             ]
             ++ hooks.enabledPackages;
             inherit (hooks) shellHook;

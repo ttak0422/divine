@@ -1,8 +1,8 @@
 NIX_UNIT ?= nix-unit
 NIXPKGS_LIB ?=
 
-.PHONY: test test-nix test-lua
-test: test-nix test-lua
+.PHONY: test test-nix test-lua test-graph
+test: test-nix test-lua test-graph
 
 # The default evaluates the suite through the locked flake's nixpkgs library.
 # An explicit library path supports offline runs without evaluating the flake.
@@ -17,3 +17,7 @@ test-lua:
 	@sh tests/mini-test-runner.sh
 	@nvim --headless -u NONE --noplugin -n -i NONE -l tests/mini-test-environment.lua
 	@nvim --headless -u NONE --noplugin -n -i NONE -l tests/after-startup.lua
+
+# Dependency-free viewer DOM-contract tests; built HTML is checked by the flake.
+test-graph:
+	@node --test tests/graph-viewer.test.js

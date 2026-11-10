@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+  <title>divine · Dependency graph</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #233449; background: #f2f5f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button, input { font: inherit; }
+    button { padding: .45rem .7rem; border: 1px solid #c8d3de; border-radius: 6px; background: white; color: #233449; cursor: pointer; }
+    button:hover { background: #eaf2fa; }
+    button:disabled { opacity: .45; cursor: default; }
+    :focus-visible { outline: 3px solid #1478be; outline-offset: 3px; }
+    header { background: #182c40; color: white; padding: 1.15rem 1.5rem; display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+    header h1 { font-size: 1.15rem; margin: 0; letter-spacing: -.02em; }
+    header span { color: #c2d5e5; font-size: .85rem; }
+    .toolbar { display: flex; gap: .55rem; align-items: center; flex-wrap: wrap; padding: .8rem 1.25rem; background: white; border-bottom: 1px solid #d6e0e8; }
+    .search-label { font-size: .85rem; font-weight: 600; }
+    #search { width: min(20rem, 100%); padding: .5rem .65rem; border: 1px solid #b7c6d4; border-radius: 6px; }
+    #search-status, #zoom-level { color: #52667b; font-size: .8rem; }
+    .zoom { display: flex; gap: .4rem; align-items: center; margin-left: auto; }
+    main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(20rem, 27rem); height: calc(100dvh - 165px); min-height: 24rem; }
+    .canvas { min-width: 0; min-height: 0; position: relative; background: white; }
+    #graph-viewport { overflow: auto; height: 100%; padding: 1.5rem; }
+    #graph-viewport svg { display: block; max-width: none; }
+    #graph-viewport .node { cursor: pointer; transition: opacity .12s; }
+    #graph-viewport .node.dimmed { opacity: .18; }
+    #graph-viewport .node.selected > polygon, #graph-viewport .node.selected > ellipse, #graph-viewport .node.selected > path { stroke: #087bb5; stroke-width: 3; }
+    #graph-viewport .node:focus { outline: none; }
+    #graph-viewport .node:focus-visible > polygon, #graph-viewport .node:focus-visible > ellipse, #graph-viewport .node:focus-visible > path { stroke: #087bb5; stroke-width: 3; }
+    aside { border-left: 1px solid #d6e0e8; background: #f8fafc; padding: 1.3rem; overflow: auto; }
+    .inspector-top { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+    .eyebrow { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #536b80; }
+    #selection-mode { font-size: .8rem; color: #52667b; margin: .5rem 0 1rem; }
+    h2 { font-size: 1.3rem; line-height: 1.35; margin: .9rem 0; overflow-wrap: anywhere; }
+    h3 { font-size: .8rem; margin: 1.3rem 0 .5rem; color: #52667b; }
+    p { line-height: 1.55; }
+    .muted { color: #63758a; font-size: .85rem; }
+    #badges { display: flex; gap: .4rem; flex-wrap: wrap; }
+    .badge { border-radius: 5px; font-size: .72rem; background: #e2edf5; color: #294d69; padding: .25rem .45rem; }
+    #identity, #unit-id { font-family: ui-monospace, monospace; font-size: .78rem; overflow-wrap: anywhere; }
+    #doc { white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: .9rem; line-height: 1.6; margin: 0; }
+    ul, ol { padding-left: 1.3rem; font-size: .8rem; line-height: 1.6; }
+    li { overflow-wrap: anywhere; margin: .35rem 0; }
+    .node-link { text-align: left; max-width: 100%; white-space: normal; overflow-wrap: anywhere; font-size: .8rem; padding: .25rem .4rem; }
+    .node-identity { display: block; color: #63758a; font-size: .72rem; font-family: ui-monospace, monospace; }
+    footer { padding: .65rem 1.25rem; font-size: .75rem; line-height: 1.6; color: #52667b; border-top: 1px solid #d6e0e8; }
+    #empty-graph { padding: 3rem; text-align: center; color: #63758a; }
+    [hidden] { display: none !important; }
+    @media (max-width: 760px) { main { grid-template-columns: 1fr; height: auto; } #graph-viewport { height: 55vh; min-height: 18rem; } aside { border-left: 0; border-top: 1px solid #d6e0e8; } .zoom { margin-left: 0; } }
+    @media (prefers-reduced-motion: reduce) { #graph-viewport .node { transition: none; } }
+  </style>
+</head>
+<body>
+  <header><h1>divine <span>/ Dependency graph</span></h1><span id="graph-summary"></span></header>
+  <div class="toolbar" aria-label="Graph controls">
+    <label class="search-label" for="search">Find</label>
+    <input id="search" type="search" placeholder="Name, identity, or documentation" autocomplete="off">
+    <button id="next-match" type="button" disabled>Next match</button>
+    <span id="search-status" role="status"></span>
+    <div class="zoom" aria-label="Zoom controls">
+      <button id="zoom-out" type="button" aria-label="Zoom out">−</button>
+      <span id="zoom-level">100%</span>
+      <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+      <button id="zoom-reset" type="button">100%</button>
+      <button id="zoom-fit" type="button">Fit</button>
+    </div>
+  </div>
+  <main>
+    <section class="canvas" aria-label="Dependency diagram">
+      <div id="graph-viewport" tabindex="0" aria-label="Scrollable dependency graph">@@GRAPH_SVG@@</div>
+      <p id="empty-graph" hidden>No plugins in this graph.</p>
+    </section>
+    <aside aria-label="Node inspector">
+      <div class="inspector-top"><span class="eyebrow">Node inspector</span><button id="clear-selection" type="button" disabled>Clear pin</button></div>
+      <p id="selection-mode" role="status">Hover or focus a node to inspect it. Click to pin.</p>
+      <div id="inspector-empty"><h2>Explore your dependencies</h2><p class="muted">Select a package or configuration occurrence to read its documentation and see its prerequisites. Tab through nodes, then press Enter or Space to pin one. Escape clears the pin.</p></div>
+      <div id="inspector-content" hidden>
+        <h2 id="node-label"></h2><div id="badges"></div>
+        <h3 id="identity-heading">Identity</h3><p id="identity"></p>
+        <h3>Documentation · Markdown source</h3><pre id="doc"></pre>
+        <h3>Startup demand</h3><p id="startup" class="muted"></p>
+        <h3>Load unit</h3><p id="unit-id"></p>
+        <h3>Prerequisites</h3><ul id="dependencies"></ul>
+        <section id="members-section" hidden><h3>Group members · declared load order</h3><p class="muted">Membership is not a dependency edge. A member may already have been loaded by another configuration.</p><ol id="members"></ol></section>
+        <h3>Declaration origins</h3><ul id="origins"></ul>
+      </div>
+    </aside>
+  </main>
+  <footer>Arrow: dependent → prerequisite. Dashed line: group membership, not a dependency. Clusters marked “Cycle” are strongly connected load units. All packages remain in opt. Offline · no external assets.</footer>
+  <noscript><p>JavaScript is required for documentation, search and zoom. The dependency diagram remains readable above.</p></noscript>
+  <script id="graph-data" type="application/json">@@GRAPH_DATA@@</script>
+  <script>@@GRAPH_SCRIPT@@</script>
+</body>
+</html>

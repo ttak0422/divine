@@ -1,6 +1,7 @@
 { lib }:
 let
   suites = {
+    graph = import ./graph.nix { inherit lib; };
     triggerNormalization = import ./trigger-normalization.nix { inherit lib; };
     packages = import ./packages.nix { inherit lib; };
     definitions = import ./definitions.nix { inherit lib; };
@@ -17,6 +18,28 @@ suites
   testSuiteDiscovery = {
     expr = builtins.mapAttrs (_: suite: builtins.attrNames suite) suites;
     expected = {
+      graph = [
+        "testChecksAndCallbacksExcluded"
+        "testConflictingDocumentation"
+        "testCycleOwnership"
+        "testEmptyGraph"
+        "testGraphvizBuildOnly"
+        "testHtmlRawTextEscaping"
+        "testMaliciousDataRoundTrip"
+        "testMembershipDotStyle"
+        "testMissingAndEmptyDocumentation"
+        "testNestedDependencies"
+        "testOrderedMembershipIsNotDependency"
+        "testOutputPathIdentity"
+        "testOverlappingGroupDocs"
+        "testOwnUnitVersusPhysicalStartup"
+        "testRejectInvalidCallback"
+        "testRejectUnknownNestedSchema"
+        "testRejectUnknownRootSchema"
+        "testRepeatedDocumentation"
+        "testSelfLoop"
+        "testUniqueSvgIdentity"
+      ];
       triggerNormalization = [
         "testCanonicalEventRetainsContextInPlan"
         "testCommandSingletonList"
