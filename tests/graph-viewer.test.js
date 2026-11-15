@@ -7,7 +7,7 @@ const test = require("node:test");
 // Isolated event/DOM contract tests, not a substitute for browser rendering QA.
 class Element {
   constructor() {
-    this.textContent = "";
+    this._text = "";
     this.hidden = false;
     this.disabled = false;
     this.children = [];
@@ -16,15 +16,20 @@ class Element {
     this.style = {};
     this.clientWidth = 800;
     this.clientHeight = 600;
+    this.scrollLeft = 0;
+    this.scrollTop = 0;
     this.classes = new Set();
     this.classList = {
       toggle: (name, on) => on ? this.classes.add(name) : this.classes.delete(name),
     };
   }
+  get textContent() { return this._text + this.children.map((child) => child.textContent).join(""); }
+  set textContent(value) { this._text = value; this.children = []; }
+  getBoundingClientRect() { return { left: 0, top: 0 }; }
   set innerHTML(_) { throw Error("Unsafe HTML insertion"); }
   setAttribute(key, value) { this.attrs[key] = value; }
   append(element) { this.children.push(element); }
-  replaceChildren() { this.children = []; }
+  replaceChildren() { this._text = ""; this.children = []; }
   addEventListener(name, handler) { this.events[name] = handler; }
   focus() { this.events.focus?.({}); }
   scrollIntoView() { this.scrolled = true; }
@@ -45,8 +50,9 @@ function boot(nodes) {
   elements["graph-viewport"].svg = svg;
   const document = new Element();
   document.getElementById = (id) => elements[id];
-  document.createElement = () => new Element();
-  vm.runInNewContext(script, { document });
+  document.createElement = (tag) => { const element = new Element(); element.tag = tag; return element; };
+  document.createTextNode = (value) => { const element = new Element(); element.textContent = value; return element; };
+  vm.runInNewContext(script, { document, URL });
   return { elements, document, svg };
 }
 
@@ -141,4 +147,73 @@ test("empty graphs show an explanation and disable irrelevant controls", () => {
 // makes Fit measure the diagram's height instead of the visible viewport.
 test("canvas can shrink inside the fixed-height graph row", () => {
   assert.match(html, /\.canvas\s*\{[^}]*min-height:\s*0\s*;/);
+});
+
+
+test("Ctrl wheel zooms at the pointer, normal scrolling and uncancelable events stay native", () => {
+  const { elements: e, svg } = boot([packageNode]);
+  const viewport = e["graph-viewport"];
+  let prevented = 0;
+  const wheel = { deltaY: -100, deltaMode: 0, clientX: 200, clientY: 150, cancelable: true, preventDefault() { prevented++; } };
+  const before = parseFloat(svg.style.width);
+  viewport.fire("wheel", wheel);
+  assert.equal(prevented, 0);
+  assert.equal(parseFloat(svg.style.width), before);
+  viewport.fire("wheel", { ...wheel, ctrlKey: true, cancelable: false });
+  assert.equal(parseFloat(svg.style.width), before);
+  viewport.fire("wheel", { ...wheel, ctrlKey: true });
+  assert.equal(prevented, 1);
+  assert.ok(parseFloat(svg.style.width) > before);
+  assert.ok(Math.abs(viewport.scrollLeft - 200 * (Math.exp(.2) - 1)) < .001);
+  assert.ok(Math.abs(viewport.scrollTop - 150 * (Math.exp(.2) - 1)) < .001);
+  for (const deltaMode of [1, 2]) {
+    viewport.fire("wheel", { ...wheel, deltaMode, ctrlKey: true, deltaY: -100000 });
+    assert.ok(parseFloat(svg.style.width) <= 1000 * 4 / 3 * 5);
+  }
+  for (let i = 0; i < 20; i++) viewport.fire("wheel", { ...wheel, ctrlKey: true, deltaY: -100000 });
+  assert.equal(e["zoom-level"].textContent, "500%");
+  for (let i = 0; i < 20; i++) viewport.fire("wheel", { ...wheel, ctrlKey: true, deltaY: 100000 });
+  assert.equal(e["zoom-level"].textContent, "2%");
+  viewport.fire("wheel", { ...wheel, ctrlKey: true, deltaY: NaN });
+  assert.ok(Number.isFinite(parseFloat(svg.style.width)));
+});
+
+test("Safari pinch uses cumulative scale and avoids simultaneous wheel zoom", () => {
+  const { elements: e, svg } = boot([packageNode]);
+  const viewport = e["graph-viewport"];
+  const gesture = { cancelable: true, clientX: 200, clientY: 150, preventDefault() {} };
+  const before = parseFloat(svg.style.width);
+  viewport.fire("gesturestart", gesture);
+  viewport.fire("gesturechange", { ...gesture, scale: 1.5 });
+  assert.equal(parseFloat(svg.style.width), before * 1.5);
+  viewport.fire("wheel", { ...gesture, ctrlKey: true, deltaY: -100 });
+  assert.equal(parseFloat(svg.style.width), before * 1.5);
+  viewport.fire("gesturechange", { ...gesture, scale: 2 });
+  assert.equal(parseFloat(svg.style.width), before * 2);
+  viewport.fire("gestureend", gesture);
+  viewport.fire("gesturechange", { ...gesture, scale: 3 });
+  assert.equal(parseFloat(svg.style.width), before * 2);
+});
+
+test("documentation tokens create safe elements with inert images and unsafe links", () => {
+  const token = (type, tag, nesting, content = "", attrs = {}) => ({ type, tag, nesting, content, attrs });
+  const docTokens = [
+    token("heading_open", "h1", 1), token("text", "", 0, "Heading"), token("heading_close", "h1", -1),
+    token("fence", "code", 0, "<script>alert(1)</script>"),
+    token("image", "img", 0, "diagram", { src: "https://example.com/tracker" }),
+    ...["javascript:alert(1)", "data:text/html,evil", "file:///tmp/secret", "//example.com", "relative.md", "https://example.com/docs"].flatMap((href) => [
+      token("link_open", "a", 1, "", { href, onclick: "alert(1)" }), token("text", "", 0, "link"), token("link_close", "a", -1),
+    ]),
+  ];
+  const { elements: e } = boot([{ ...packageNode, docTokens }]);
+  e[packageNode.svgId].fire("mouseenter");
+  assert.equal(e.doc.children[0].tag, "h1");
+  assert.equal(e.doc.children[1].children[0].tag, "code");
+  assert.match(e.doc.textContent, /<script>alert\(1\)<\/script>/);
+  assert.match(e.doc.textContent, /\[Image: diagram\]/);
+  assert.equal(e.doc.children.filter((element) => element.tag === "a").length, 1);
+  const link = e.doc.children.at(-1);
+  assert.equal(link.href, "https://example.com/docs");
+  assert.equal(link.rel, "noopener noreferrer");
+  assert.equal(link.onclick, undefined);
 });
