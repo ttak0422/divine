@@ -2,7 +2,8 @@
   Build a standalone offline HTML dependency graph from configuration docs.
 
   Graphviz is a build-time tool only. The output does not change the runtime
-  bundle or evaluate check functions. All embedded user data is inert text.
+  bundle or evaluate check functions. Documentation is parsed at build time
+  and rendered with safe DOM elements.
 
   # Type
 
@@ -17,16 +18,10 @@ let
   graph = builtins.seq compiled.plan compiled.graph;
   view = import ./graph/data.nix { inherit lib; } graph;
 
-  # HTML script elements are raw-text contexts, even for application/json.
-  json = builtins.replaceStrings [ "<" ">" "&" ] [ "\\u003c" "\\u003e" "\\u0026" ] (
-    builtins.toJSON view.data
-  );
+  data = pkgs.writeText "divine-graph.json" (builtins.toJSON view.data);
+  python = pkgs.python3.withPackages (ps: [ ps.markdown-it-py ]);
   parts = map (
-    part:
-    builtins.replaceStrings
-      [ "@@GRAPH_DATA@@" "@@GRAPH_SCRIPT@@" ]
-      [ json (builtins.readFile ./graph/viewer.js) ]
-      part
+    part: builtins.replaceStrings [ "@@GRAPH_SCRIPT@@" ] [ (builtins.readFile ./graph/viewer.js) ] part
   ) (lib.splitString "@@GRAPH_SVG@@" (builtins.readFile ./graph/viewer.html));
   prefix = pkgs.writeText "divine-graph-prefix.html" (builtins.head parts);
   suffix = pkgs.writeText "divine-graph-suffix.html" (builtins.elemAt parts 1);
@@ -37,5 +32,5 @@ pkgs.runCommand "divine-graph.html" { nativeBuildInputs = [ pkgs.graphviz ]; } '
   dot -Tsvg ${dot} > graph.svg
   cat ${prefix} > "$out"
   sed -n '/<svg/,$p' graph.svg >> "$out"
-  cat ${suffix} >> "$out"
+  ${python}/bin/python ${./graph/markdown.py} ${data} ${suffix} >> "$out"
 ''

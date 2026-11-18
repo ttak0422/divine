@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; base-uri 'none'; form-action 'none'">
   <title>divine · Dependency graph</title>
   <style>
     :root { color-scheme: light; font-family: system-ui, sans-serif; color: #233449; background: #f2f5f8; }
@@ -42,7 +42,15 @@
     #badges { display: flex; gap: .4rem; flex-wrap: wrap; }
     .badge { border-radius: 5px; font-size: .72rem; background: #e2edf5; color: #294d69; padding: .25rem .45rem; }
     #identity, #unit-id { font-family: ui-monospace, monospace; font-size: .78rem; overflow-wrap: anywhere; }
-    #doc { white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: .9rem; line-height: 1.6; margin: 0; }
+    #doc { overflow-wrap: anywhere; font-family: inherit; font-size: .9rem; line-height: 1.6; margin: 0; }
+    #doc > :first-child { margin-top: 0; }
+    #doc h1, #doc h2, #doc h3, #doc h4, #doc h5, #doc h6 { color: inherit; font-size: 1.05em; margin: 1em 0 .4em; }
+    #doc h1 { font-size: 1.4em; } #doc h2 { font-size: 1.2em; }
+    #doc ul, #doc ol { font-size: inherit; }
+    #doc pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #eaf0f5; padding: .7rem; border-radius: 6px; }
+    #doc code { font-family: ui-monospace, monospace; font-size: .9em; background: #eaf0f5; }
+    #doc blockquote { border-left: 3px solid #b7c6d4; margin: .8rem 0; padding-left: .8rem; }
+    #doc a { color: #086ca4; }
     ul, ol { padding-left: 1.3rem; font-size: .8rem; line-height: 1.6; }
     li { overflow-wrap: anywhere; margin: .35rem 0; }
     .node-link { text-align: left; max-width: 100%; white-space: normal; overflow-wrap: anywhere; font-size: .8rem; padding: .25rem .4rem; }
@@ -71,7 +79,7 @@
   </div>
   <main>
     <section class="canvas" aria-label="Dependency diagram">
-      <div id="graph-viewport" tabindex="0" aria-label="Scrollable dependency graph">@@GRAPH_SVG@@</div>
+      <div id="graph-viewport" tabindex="0" aria-label="Scrollable dependency graph" aria-describedby="zoom-help">@@GRAPH_SVG@@</div>
       <p id="empty-graph" hidden>No plugins in this graph.</p>
     </section>
     <aside aria-label="Node inspector">
@@ -81,7 +89,7 @@
       <div id="inspector-content" hidden>
         <h2 id="node-label"></h2><div id="badges"></div>
         <h3 id="identity-heading">Identity</h3><p id="identity"></p>
-        <h3>Documentation · Markdown source</h3><pre id="doc"></pre>
+        <h3>Documentation</h3><div id="doc"></div>
         <h3>Startup demand</h3><p id="startup" class="muted"></p>
         <h3>Load unit</h3><p id="unit-id"></p>
         <h3>Prerequisites</h3><ul id="dependencies"></ul>
@@ -90,7 +98,7 @@
       </div>
     </aside>
   </main>
-  <footer>Arrow: dependent → prerequisite. Dashed line: group membership, not a dependency. Clusters marked “Cycle” are strongly connected load units. All packages remain in opt. Offline · no external assets.</footer>
+  <footer><span id="zoom-help">Scroll to pan. Ctrl + wheel or trackpad pinch to zoom. </span>Arrow: dependent → prerequisite. Dashed line: group membership, not a dependency. Clusters marked “Cycle” are strongly connected load units. All packages remain in opt. Offline · no external assets.</footer>
   <noscript><p>JavaScript is required for documentation, search and zoom. The dependency diagram remains readable above.</p></noscript>
   <script id="graph-data" type="application/json">@@GRAPH_DATA@@</script>
   <script>@@GRAPH_SCRIPT@@</script>

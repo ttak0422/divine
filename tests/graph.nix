@@ -17,6 +17,10 @@ let
   group = "packages:plugins[0]";
   pkgs = {
     graphviz = "graphviz-build-only";
+    python3.withPackages =
+      select:
+      assert select { markdown-it-py = "markdown-parser"; } == [ "markdown-parser" ];
+      "python-build-only";
     writeText = name: text: "FILE:${name}\n${text}\nEND:${name}";
     runCommand = name: attrs: script: { inherit name attrs script; };
   };
@@ -300,12 +304,12 @@ in
       doc = hostile;
     };
   };
-  testHtmlRawTextEscaping = {
+  # Generated HTML tests verify escaping after the build-time Markdown step.
+  testDocDataSeparateFromHtmlTemplate = {
     expr =
-      lib.hasInfix "\\u003c/script\\u003e\\u003cscript\\u003e" unsafeRendered
-      && lib.hasInfix "\\u0026" unsafeRendered
-      && lib.hasInfix "@@GRAPH_SVG@@ @@GRAPH_DATA@@" unsafeRendered
-      && !(lib.hasInfix "</script><script>globalThis.graphInjected" unsafeRendered);
+      lib.hasInfix "@@GRAPH_DATA@@" unsafeRendered
+      && !(lib.hasInfix hostile unsafeRendered)
+      && lib.hasInfix "python-build-only/bin/python" (render unsafeConfiguration).script;
     expected = true;
   };
   testChecksAndCallbacksExcluded = {

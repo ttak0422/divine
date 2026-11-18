@@ -59,8 +59,9 @@ open result # macOS
 
 On other systems, open the `result` file in a browser. The file includes its SVG,
 styles, script and data; it works offline without a web server, CDN or runtime
-Graphviz installation. Graphviz is only a Nix build dependency. Building can
-still need network access for Nix inputs and build dependencies.
+Graphviz installation. Graphviz and the nixpkgs Markdown parser (markdown-it-py)
+are build dependencies only. Building can still need network access for Nix inputs
+and build dependencies.
 
 ## Read the graph
 
@@ -82,10 +83,23 @@ still need network access for Nix inputs and build dependencies.
   membership does not create a new singleton startup demand.
 
 Hover over a node to read its `doc`. Use selection to keep its details visible.
-Documentation is displayed as plain text, including any Markdown syntax. HTML
-inside labels or docs is not rendered as active content. Missing and empty
-inline documentation are valid. Repeated singleton documentation uses existing
+Documentation renders CommonMark headings, paragraphs, nested lists, emphasis,
+blockquotes, inline and fenced code, and links. Parsing happens during the Nix
+build; the browser creates only allowed DOM elements and never inserts doc HTML.
+Raw HTML stays literal, and images show their alternative text without loading
+resources, including embedded images. Only absolute HTTP, HTTPS and mailto links
+are active; they open on explicit activation with no opener or referrer. Relative,
+protocol-relative and unsafe URL schemes stay inert. Labels remain plain text.
+Missing and empty inline documentation are valid. Repeated singleton documentation uses existing
 settings equality: equal strings merge and conflicting strings fail.
+
+Use the zoom buttons, Fit or 100% as before. Over the diagram, hold Ctrl while
+turning the mouse wheel, or pinch on a trackpad, to zoom around the pointer
+(within the scrollable bounds). Ordinary wheel and two-finger scrolling still
+pan the diagram; scrolling the inspector or page is unchanged. Pixel, line and
+page wheel deltas are normalized. Safari's gesture events are supported alongside
+the Ctrl-wheel pinch events used by other browsers. Gestures outside the diagram
+retain the browser's normal behavior.
 
 This is a configuration loading graph, not a Nix build graph or a recording of
 runtime load events. Lua callback source, check functions and arbitrary package
@@ -108,5 +122,9 @@ python3 tests/graph-browser.py result
 ```
 
 This uses the exported viewer with a synthetic tall SVG and checks viewport
-containment, Fit, inner scrolling at 100%, and narrow-screen layout. It does not
-add a browser dependency to the normal development shell or runtime bundle.
+containment, Fit, ordinary wheel scrolling, pointer-anchored Ctrl-wheel zoom,
+synthetic Safari gestures, inspector scrolling, and narrow-screen layout. The
+fixture HTML from the graph check also exercises Markdown and hostile docs.
+Browser automation does not verify physical trackpad gesture delivery or replace
+manual testing on each browser and operating system. It does not add a browser
+dependency to the normal development shell or runtime bundle.
