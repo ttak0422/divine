@@ -7,10 +7,14 @@
   # Type
 
   ```
-  import ./resolve.nix :: { lib :: AttrSet, inspectDefinitions :: [Package | Definition] -> [InspectedDefinition] } -> Configuration -> Graph
+  import ./resolve.nix :: { lib :: AttrSet, inspectDefinitions :: [Package | Definition] -> [InspectedDefinition], graphOnly? :: Bool } -> Configuration -> Graph
   ```
 */
-{ lib, inspectDefinitions }:
+{
+  lib,
+  inspectDefinitions,
+  graphOnly ? false,
+}:
 request@{
   plugins,
   extraPackages ? [ ],
@@ -134,7 +138,8 @@ let
     );
 
   /**
-    Validate a package list, deduplicate by output path and sort by that path.
+    Validate a tool list; the runtime also deduplicates and sorts by output path.
+    The graph-only resolver preserves declaration order and never compares paths.
 
     The first argument is the diagnostic context. Preserve the first package
     value for each identity, including its original derivation attributes.
@@ -149,6 +154,8 @@ let
     context: values:
     if !builtins.isList values || !lib.all lib.isDerivation values then
       fail "${context} must be a list of packages"
+    else if graphOnly then
+      values
     else
       let
         indexed = foldl' (
@@ -474,7 +481,7 @@ let
     fields = attrNames node.settings;
     inherit (node) dependencies;
     loadAfter = node.settings.loadAfter or false;
-    tools = map key node.extraPackages;
+    tools = if graphOnly then builtins.length node.extraPackages else map key node.extraPackages;
   }) nodes;
   rootTools = packageSet "root extraPackages" extraPackages;
   tools = packageSet "extraPackages" (
@@ -483,25 +490,28 @@ let
 in
 deepSeq (attrNames tests) (
   deepSeq validation (
-    deepSeq (map key tools) {
-      inherit
-        nodes
-        units
-        tests
-        configurationNodes
-        ;
-      roots = lib.unique (
-        lib.imap0 (
-          i: node:
-          if node.definition ? packages then "packages:plugins[${toString i}]" else key node.definition.plugin
-        ) trees
-      );
-      startupUnits = map (unit: unit.id) (builtins.filter (unit: unit.startup) units);
-      extraPackages = tools;
-      metadata = builtins.removeAttrs request [
-        "plugins"
-        "extraPackages"
-      ];
-    }
+    deepSeq (if graphOnly then builtins.length tools else map key tools) (
+      {
+        inherit
+          nodes
+          units
+          tests
+          configurationNodes
+          ;
+        roots = lib.unique (
+          lib.imap0 (
+            i: node:
+            if node.definition ? packages then "packages:plugins[${toString i}]" else key node.definition.plugin
+          ) trees
+        );
+        startupUnits = map (unit: unit.id) (builtins.filter (unit: unit.startup) units);
+        extraPackages = tools;
+        metadata = builtins.removeAttrs request [
+          "plugins"
+          "extraPackages"
+        ];
+      }
+      // lib.optionalAttrs graphOnly { rootExtraPackages = rootTools; }
+    )
   )
 )

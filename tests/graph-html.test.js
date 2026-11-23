@@ -27,6 +27,9 @@ const decodedSvg = html.split('<script')[0]
   .replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 assert.ok(decodedSvg.includes('quotes-"<&>-\\N label'), "DOT labels normalize tab spacing without changing literal punctuation");
 assert.equal(data.nodes.length, 6);
+assert.deepEqual(data.rootExtraPackageNames, ["graph-fixture-tool"]);
+assert.deepEqual(data.nodes.find((n) => n.id.endsWith("-alpha")).extraPackageNames, ["graph-fixture-tool"]);
+assert.deepEqual(data.nodes.find((n) => n.id === "packages:plugins[2]").extraPackageNames, ["graph-fixture-tool"]);
 assert.equal(data.nodes.filter((n) => n.label === "shared-name").length, 2);
 assert.equal(data.nodes.filter((n) => n.cyclic).length, 3);
 assert.equal(data.nodes.find((n) => n.label === "undocumented").doc, null);

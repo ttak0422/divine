@@ -2,9 +2,11 @@
 
 The provisional `lib.mkGraph { pkgs; configuration; }` API builds a single HTML
 file with an interactive graph and inline documentation. It uses the compiler's
-validated configuration, so unknown fields and conflicting repeated definitions
-fail rather than producing a partial graph. This is a separate export: it does
-not change the Neovim runtime or execute inline check functions.
+input normalization and dependency resolution, so unknown fields and conflicting
+repeated definitions still fail rather than producing a partial graph. The
+export does not generate or validate the runtime plan, read Lua callback files,
+or execute inline check functions. It still evaluates the package identities and
+other inputs needed for the dependency graph.
 
 ## Export from a flake
 
@@ -81,6 +83,11 @@ and build dependencies.
 - A package's own unit can be deferred while the physical package is needed at
   startup by a group. Own-unit startup and physical startup are shown separately;
   membership does not create a new singleton startup demand.
+- Global, plugin and package-group `extraPackages` appear in separate inspector
+  lists as text, not nodes or edges. The graph reads `pname` (or `name`) without
+  using the tool's output path. Identical labels collapse even when they represent
+  distinct runtime packages; runtime tool resolution continues to use output paths.
+  Custom names must be evaluable without the output path for this to avoid it.
 
 Hover over a node to read its `doc`. Use selection to keep its details visible.
 Documentation renders CommonMark headings, paragraphs, nested lists, emphasis,

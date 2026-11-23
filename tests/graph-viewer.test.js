@@ -39,12 +39,12 @@ class Element {
 
 const html = fs.readFileSync(path.join(__dirname, "../lib/graph/viewer.html"), "utf8");
 const script = fs.readFileSync(path.join(__dirname, "../lib/graph/viewer.js"), "utf8");
-function boot(nodes) {
+function boot(nodes, rootTools = []) {
   const elements = Object.fromEntries(
     [...html.matchAll(/id="([^"]+)"/g)].map((match) => [match[1], new Element()]),
   );
   nodes.forEach((node) => { elements[node.svgId] = new Element(); });
-  elements["graph-data"].textContent = JSON.stringify({ nodes, units: [], roots: [] });
+  elements["graph-data"].textContent = JSON.stringify({ nodes, units: [], roots: [], rootExtraPackageNames: rootTools });
   const svg = new Element();
   svg.viewBox = { baseVal: { width: 1000, height: 800 } };
   elements["graph-viewport"].svg = svg;
@@ -66,6 +66,20 @@ const groupNode = {
   ...packageNode, id: "group:1", svgId: "graph-node-1", kind: "configuration",
   doc: null, members: [packageNode.id], dependencies: [packageNode.id],
 };
+
+test("runtime tools are separate, text-only lists in the inspector", () => {
+  const label = "<img src=x onerror=alert(1)>";
+  const { elements: e } = boot([{ ...packageNode, extraPackageNames: [label] }, groupNode], ["global-tool"]);
+  assert.equal(e["root-tools-section"].hidden, false);
+  assert.equal(e["root-tools"].textContent, "global-tool");
+  e[packageNode.svgId].fire("mouseenter");
+  assert.equal(e["node-tools-section"].hidden, false);
+  assert.equal(e["node-tools"].children[0].textContent, label);
+  assert.equal(e["node-tools"].children[0].children.length, 0);
+  assert.equal(e.dependencies.textContent, "None");
+  e[groupNode.svgId].fire("mouseenter");
+  assert.equal(e["node-tools-section"].hidden, true);
+});
 
 test("hover and focus show text-safe docs, identities, membership and startup distinctions", () => {
   const { elements: e } = boot([packageNode, groupNode]);

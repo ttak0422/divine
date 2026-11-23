@@ -7,14 +7,13 @@
   # Type
 
   ```
-  import ./compile.nix :: { lib :: AttrSet, resolve :: Configuration -> Graph } -> CompilationConfiguration -> Compiled
+  import ./compile.nix :: { lib :: AttrSet, resolveConfiguration :: CompilationConfiguration -> Graph } -> CompilationConfiguration -> Compiled
   ```
 */
-{ lib, resolve }:
+{ lib, resolveConfiguration }:
 configuration:
 let
-  adapter = import ./options.nix { inherit lib; };
-  graph = resolve (adapter.normalize configuration);
+  graph = resolveConfiguration configuration;
 
   /**
     Raise a compiler diagnostic; this function never returns a value.

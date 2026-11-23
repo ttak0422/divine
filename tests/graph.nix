@@ -25,6 +25,64 @@ let
     runCommand = name: attrs: script: { inherit name attrs script; };
   };
   render = configuration: api.mkGraph { inherit pkgs configuration; };
+  jsonInput =
+    configuration:
+    builtins.head (
+      lib.splitString "\nEND:divine-graph.json" (
+        builtins.elemAt (lib.splitString "FILE:divine-graph.json\n" (render configuration).script) 1
+      )
+    );
+  renderedData =
+    configuration: builtins.fromJSON (builtins.unsafeDiscardStringContext (jsonInput configuration));
+  tool = {
+    type = "derivation";
+    pname = "root/tool";
+    name = throw "pname should win over name";
+    outPath = throw "runtime tool outPath was evaluated";
+  };
+  toolA = package "same-tool" "tool-a";
+  toolB = package "same-tool" "tool-b";
+  toolContextPath = builtins.toFile "divine-graph-tool-context" "fixture";
+  contextualTool = tool // {
+    pname = builtins.appendContext "context-free-display" (builtins.getContext toolContextPath);
+  };
+  toolFixture = {
+    extraPackages = [
+      tool
+      tool
+      contextualTool
+      (builtins.removeAttrs tool [
+        "pname"
+        "name"
+      ])
+    ];
+    plugins = [
+      {
+        plugin = a;
+        dependPlugins = [ b ];
+        extraPackages = [ toolA ];
+      }
+      {
+        plugin = a;
+        extraPackages = [
+          toolA
+          toolB
+        ];
+      }
+      {
+        plugin = b;
+        dependPlugins = [ a ];
+      }
+      {
+        packages = [ c ];
+        dependPlugins = [ a ];
+        extraPackages = [ tool ];
+      }
+    ];
+  };
+  noToolFixture = {
+    plugins = map (definition: builtins.removeAttrs definition [ "extraPackages" ]) toolFixture.plugins;
+  };
   repeated = view [
     {
       plugin = a;
@@ -67,6 +125,16 @@ let
       load = "private_load_callback()";
       tests.mustNotRun = _: throw "graph invoked a check body";
     }
+  ];
+  graphFixture.plugins = [
+    {
+      plugin = a;
+      doc = "Public docs";
+      dependPlugins = [ b ];
+    }
+  ];
+  invalidRuntimeEvent.plugins = [
+    ((builtins.head graphFixture.plugins) // { onEvents = "NotANeovimEvent"; })
   ];
   invalid = configuration: {
     expr = (render configuration).script;
@@ -289,6 +357,7 @@ in
       nodes = [ ];
       roots = [ ];
       units = [ ];
+      rootExtraPackageNames = [ ];
     };
   };
   testMaliciousDataRoundTrip = {
@@ -327,6 +396,100 @@ in
         ]
       );
     expected = true;
+  };
+  testGraphSkipsRuntimePlan = {
+    # A well-typed runtime path may be unreadable in a graph-only environment.
+    # The graph, DOT and HTML inputs must stay unchanged.
+    expr = map (configuration: (render configuration).script == (render graphFixture).script) [
+      invalidRuntimeEvent
+      (graphFixture // { startupConfig = ./missing-graph-runtime.lua; })
+    ];
+    expected = [
+      true
+      true
+    ];
+  };
+  testRuntimeStillValidatesPlan = {
+    expr = {
+      plan = (builtins.tryEval (api.compile invalidRuntimeEvent).plan).success;
+      bundle =
+        (builtins.tryEval
+          (api.mkBundle {
+            inherit pkgs;
+            configuration = invalidRuntimeEvent;
+          }).script
+        ).success;
+    };
+    expected = {
+      plan = false;
+      bundle = false;
+    };
+  };
+  testGraphToolLabelsAndTopology = {
+    expr =
+      let
+        rendered = renderedData toolFixture;
+        topology = data: {
+          inherit (data) units roots;
+          nodes = map (item: builtins.removeAttrs item [ "extraPackageNames" ]) data.nodes;
+        };
+      in
+      {
+        root = rendered.rootExtraPackageNames;
+        singleton = (node rendered (id a)).extraPackageNames;
+        group = (node rendered "packages:plugins[3]").extraPackageNames;
+        unchangedTopology = topology rendered == topology (renderedData noToolFixture);
+        renderedWithoutToolContext =
+          !(builtins.hasAttr (builtins.unsafeDiscardStringContext toolContextPath) (
+            builtins.getContext (jsonInput toolFixture)
+          ));
+      };
+    expected = {
+      root = [
+        "root/tool"
+        "context-free-display"
+        "(unnamed package)"
+      ];
+      singleton = [ "same-tool" ];
+      group = [ "root/tool" ];
+      unchangedTopology = true;
+      renderedWithoutToolContext = true;
+    };
+  };
+  testRuntimeToolPathValidationAndDedup = {
+    expr = {
+      plan = (builtins.tryEval (api.compile toolFixture).plan).success;
+      bundle =
+        (builtins.tryEval
+          (api.mkBundle {
+            inherit pkgs;
+            configuration = toolFixture;
+          }).script
+        ).success;
+      paths =
+        map id
+          (api.compile {
+            extraPackages = [
+              toolB
+              toolA
+              toolB
+            ];
+            plugins = [
+              {
+                plugin = a;
+                extraPackages = [ toolA ];
+              }
+            ];
+          }).graph.extraPackages;
+    };
+    expected = {
+      plan = false;
+      bundle = false;
+      paths = [
+        (id toolA)
+        (id toolB)
+      ];
+    };
   };
   testGraphvizBuildOnly = {
     expr = (render { plugins = [ ]; }).attrs.nativeBuildInputs;
