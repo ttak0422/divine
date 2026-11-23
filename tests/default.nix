@@ -24,6 +24,7 @@ suites
         "testCycleOwnership"
         "testDocDataSeparateFromHtmlTemplate"
         "testEmptyGraph"
+        "testGraphSkipsRuntimePlan"
         "testGraphvizBuildOnly"
         "testMaliciousDataRoundTrip"
         "testMembershipDotStyle"
@@ -37,6 +38,7 @@ suites
         "testRejectUnknownNestedSchema"
         "testRejectUnknownRootSchema"
         "testRepeatedDocumentation"
+        "testRuntimeStillValidatesPlan"
         "testSelfLoop"
         "testUniqueSvgIdentity"
       ];

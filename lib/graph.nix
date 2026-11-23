@@ -2,8 +2,8 @@
   Build a standalone offline HTML dependency graph from configuration docs.
 
   Graphviz is a build-time tool only. The output does not change the runtime
-  bundle or evaluate check functions. Documentation is parsed at build time
-  and rendered with safe DOM elements.
+  bundle, force the runtime plan or evaluate check functions. Documentation is
+  parsed at build time and rendered with safe DOM elements.
 
   # Type
 
@@ -14,8 +14,9 @@
 { lib, compile }:
 { pkgs, configuration }:
 let
-  compiled = compile configuration;
-  graph = builtins.seq compiled.plan compiled.graph;
+  # The compiler's graph field shares input normalization and resolution with
+  # the bundle without forcing its runtime-only plan or Lua serialization.
+  graph = (compile configuration).graph;
   view = import ./graph/data.nix { inherit lib; } graph;
 
   data = pkgs.writeText "divine-graph.json" (builtins.toJSON view.data);

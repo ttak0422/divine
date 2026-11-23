@@ -68,6 +68,16 @@ let
       tests.mustNotRun = _: throw "graph invoked a check body";
     }
   ];
+  graphFixture.plugins = [
+    {
+      plugin = a;
+      doc = "Public docs";
+      dependPlugins = [ b ];
+    }
+  ];
+  invalidRuntimeEvent.plugins = [
+    ((builtins.head graphFixture.plugins) // { onEvents = "NotANeovimEvent"; })
+  ];
   invalid = configuration: {
     expr = (render configuration).script;
     expectedError.type = "ThrownError";
@@ -327,6 +337,34 @@ in
         ]
       );
     expected = true;
+  };
+  testGraphSkipsRuntimePlan = {
+    # A well-typed runtime path may be unreadable in a graph-only environment.
+    # The graph, DOT and HTML inputs must stay unchanged.
+    expr = map (configuration: (render configuration).script == (render graphFixture).script) [
+      invalidRuntimeEvent
+      (graphFixture // { startupConfig = ./missing-graph-runtime.lua; })
+    ];
+    expected = [
+      true
+      true
+    ];
+  };
+  testRuntimeStillValidatesPlan = {
+    expr = {
+      plan = (builtins.tryEval (api.compile invalidRuntimeEvent).plan).success;
+      bundle =
+        (builtins.tryEval
+          (api.mkBundle {
+            inherit pkgs;
+            configuration = invalidRuntimeEvent;
+          }).script
+        ).success;
+    };
+    expected = {
+      plan = false;
+      bundle = false;
+    };
   };
   testGraphvizBuildOnly = {
     expr = (render { plugins = [ ]; }).attrs.nativeBuildInputs;

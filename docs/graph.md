@@ -2,9 +2,11 @@
 
 The provisional `lib.mkGraph { pkgs; configuration; }` API builds a single HTML
 file with an interactive graph and inline documentation. It uses the compiler's
-validated configuration, so unknown fields and conflicting repeated definitions
-fail rather than producing a partial graph. This is a separate export: it does
-not change the Neovim runtime or execute inline check functions.
+input normalization and dependency resolution, so unknown fields and conflicting
+repeated definitions still fail rather than producing a partial graph. The
+export does not generate or validate the runtime plan, read Lua callback files,
+or execute inline check functions. It still evaluates the package identities and
+other inputs needed for the dependency graph.
 
 ## Export from a flake
 
