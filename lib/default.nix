@@ -61,7 +61,25 @@ let
     else
       throw "divine prototype: expected a list of plugin definitions";
   resolve = import ./resolve.nix { inherit lib inspectDefinitions; };
-  compile = import ./compile.nix { inherit lib resolve; };
+  inherit (import ./options.nix { inherit lib; }) normalize;
+  /**
+    Apply the shared input normalization before a private resolver strategy.
+
+    # Type
+
+    ```
+    resolveConfiguration :: (Configuration -> Graph) -> CompilationConfiguration -> Graph
+    ```
+  */
+  resolveConfiguration = resolver: configuration: resolver (normalize configuration);
+  resolveGraph = import ./resolve.nix {
+    inherit lib inspectDefinitions;
+    graphOnly = true;
+  };
+  compile = import ./compile.nix {
+    inherit lib;
+    resolveConfiguration = resolveConfiguration resolve;
+  };
   mkBundle = import ./bundle.nix { inherit lib compile; };
 in
 {
@@ -147,5 +165,8 @@ in
     mkGraph :: { pkgs :: PackageSet, configuration :: CompilationConfiguration } -> Derivation
     ```
   */
-  mkGraph = import ./graph.nix { inherit lib compile; };
+  mkGraph = import ./graph.nix {
+    inherit lib;
+    resolveConfiguration = resolveConfiguration resolveGraph;
+  };
 }

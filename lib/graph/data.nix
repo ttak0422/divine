@@ -30,6 +30,22 @@ let
       }) unit.configurations
     ) graph.units
   );
+  # These are labels, not identities. Do not coerce a package to a string or
+  # retain a name's string context; the export must not depend on the tool.
+  toolNames =
+    packages:
+    lib.unique (
+      map (
+        package:
+        let
+          name = package.pname or package.name or null;
+        in
+        if builtins.isString name && name != "" then
+          builtins.unsafeDiscardStringContext name
+        else
+          "(unnamed package)"
+      ) packages
+    );
   nodes = map (
     id:
     let
@@ -44,6 +60,7 @@ let
       kind = if isPackage then "package" else "configuration";
       doc = node.settings.doc or null;
       inherit (node) origins dependencies;
+      extraPackageNames = toolNames node.extraPackages;
       members = if isPackage then [ id ] else node.members;
       root = builtins.elem id graph.roots;
       unitId = unit.id;
@@ -59,6 +76,7 @@ let
   data = {
     inherit nodes;
     inherit (graph) roots units;
+    rootExtraPackageNames = toolNames (graph.rootExtraPackages or [ ]);
   };
 
   /**

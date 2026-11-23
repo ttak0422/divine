@@ -11,8 +11,14 @@ let
   b = package "shared-name" "beta";
   c = package "quotes-\"<&>-\\N\tlabel" "gamma";
   d = package "undocumented" "delta";
+  tool = {
+    type = "derivation";
+    name = "graph-fixture-tool";
+    outPath = throw "rendering should not evaluate tool outputs";
+  };
 in
 {
+  extraPackages = [ tool ];
   plugins = [
     {
       plugin = a;
@@ -53,6 +59,10 @@ in
         <img src="https://example.com/raw.png" onerror="globalThis.graphInjected = true">
       '';
       dependPlugins = [ b ];
+      extraPackages = [
+        tool
+        tool
+      ];
     }
     {
       plugin = b;
@@ -67,6 +77,7 @@ in
         c
       ];
       doc = "Shared configuration documentation";
+      extraPackages = [ tool ];
       dependPlugins = [ a ];
     }
     {

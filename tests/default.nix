@@ -25,6 +25,7 @@ suites
         "testDocDataSeparateFromHtmlTemplate"
         "testEmptyGraph"
         "testGraphSkipsRuntimePlan"
+        "testGraphToolLabelsAndTopology"
         "testGraphvizBuildOnly"
         "testMaliciousDataRoundTrip"
         "testMembershipDotStyle"
@@ -39,6 +40,7 @@ suites
         "testRejectUnknownRootSchema"
         "testRepeatedDocumentation"
         "testRuntimeStillValidatesPlan"
+        "testRuntimeToolPathValidationAndDedup"
         "testSelfLoop"
         "testUniqueSvgIdentity"
       ];

@@ -8,15 +8,13 @@
   # Type
 
   ```
-  import ./graph.nix :: { lib :: AttrSet, compile :: CompilationConfiguration -> Compiled } -> { pkgs :: PackageSet, configuration :: CompilationConfiguration } -> Derivation
+  import ./graph.nix :: { lib :: AttrSet, resolveConfiguration :: CompilationConfiguration -> Graph } -> { pkgs :: PackageSet, configuration :: CompilationConfiguration } -> Derivation
   ```
 */
-{ lib, compile }:
+{ lib, resolveConfiguration }:
 { pkgs, configuration }:
 let
-  # The compiler's graph field shares input normalization and resolution with
-  # the bundle without forcing its runtime-only plan or Lua serialization.
-  graph = (compile configuration).graph;
+  graph = resolveConfiguration configuration;
   view = import ./graph/data.nix { inherit lib; } graph;
 
   data = pkgs.writeText "divine-graph.json" (builtins.toJSON view.data);

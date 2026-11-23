@@ -83,6 +83,11 @@ and build dependencies.
 - A package's own unit can be deferred while the physical package is needed at
   startup by a group. Own-unit startup and physical startup are shown separately;
   membership does not create a new singleton startup demand.
+- Global, plugin and package-group `extraPackages` appear in separate inspector
+  lists as text, not nodes or edges. The graph reads `pname` (or `name`) without
+  using the tool's output path. Identical labels collapse even when they represent
+  distinct runtime packages; runtime tool resolution continues to use output paths.
+  Custom names must be evaluable without the output path for this to avoid it.
 
 Hover over a node to read its `doc`. Use selection to keep its details visible.
 Documentation renders CommonMark headings, paragraphs, nested lists, emphasis,

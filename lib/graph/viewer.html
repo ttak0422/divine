@@ -85,6 +85,7 @@
     <aside aria-label="Node inspector">
       <div class="inspector-top"><span class="eyebrow">Node inspector</span><button id="clear-selection" type="button" disabled>Clear pin</button></div>
       <p id="selection-mode" role="status">Hover or focus a node to inspect it. Click to pin.</p>
+      <section id="root-tools-section" hidden><h3>Global runtime tools</h3><ul id="root-tools"></ul></section>
       <div id="inspector-empty"><h2>Explore your dependencies</h2><p class="muted">Select a package or configuration occurrence to read its documentation and see its prerequisites. Tab through nodes, then press Enter or Space to pin one. Escape clears the pin.</p></div>
       <div id="inspector-content" hidden>
         <h2 id="node-label"></h2><div id="badges"></div>
@@ -93,6 +94,7 @@
         <h3>Startup demand</h3><p id="startup" class="muted"></p>
         <h3>Load unit</h3><p id="unit-id"></p>
         <h3>Prerequisites</h3><ul id="dependencies"></ul>
+        <section id="node-tools-section" hidden><h3>Runtime tools declared here</h3><ul id="node-tools"></ul></section>
         <section id="members-section" hidden><h3>Group members · declared load order</h3><p class="muted">Membership is not a dependency edge. A member may already have been loaded by another configuration.</p><ol id="members"></ol></section>
         <h3>Declaration origins</h3><ul id="origins"></ul>
       </div>

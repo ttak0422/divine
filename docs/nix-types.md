@@ -319,9 +319,10 @@ into the runtime tree. See [the cartridge guide](cartridges.md).
 ## Offline graph export
 
 `mkGraph :: { pkgs :: PackageSet, configuration :: CompilationConfiguration } -> Derivation`
-returns one standalone HTML file, separate from the runtime bundle. Compiler
-validation precedes display projection; inline checks are not invoked. Graphviz
-is a build-time dependency only. See [the graph guide](graph.md).
+returns one standalone HTML file, separate from the runtime bundle. Input
+normalization and dependency resolution precede display projection; the runtime
+plan and inline checks are not invoked. Graphviz is a build-time dependency only.
+See [the graph guide](graph.md).
 
 The internal projection in `lib/graph/data.nix` produces
 `{ data :: GraphView, dot :: String }` from a resolved `Graph`:
@@ -330,7 +331,8 @@ The internal projection in `lib/graph/data.nix` produces
 GraphView = {
   nodes :: [GraphViewNode],
   roots :: [String],
-  units :: [Unit]
+  units :: [Unit],
+  rootExtraPackageNames :: [String]
 }
 GraphViewNode = {
   id :: String,
@@ -340,6 +342,7 @@ GraphViewNode = {
   doc :: String | Null,
   origins :: [String],
   dependencies :: [String],
+  extraPackageNames :: [String],
   members :: [String],
   root :: Bool,
   unitId :: String,
